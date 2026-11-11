@@ -4,6 +4,22 @@ if (tg) { tg.ready(); tg.expand(); }
 let player = null;
 let dynastyGeneration = 1;
 
+// ==================== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ====================
+
+function switchTab(tabId) {
+  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+
+  document.getElementById(`tab-${tabId}`).classList.add('active');
+
+  const navIndex = tabId === 'character' ? 0 : tabId === 'relations' ? 1 : 2;
+  document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
+
+  if (tabId === 'relations') renderRelations();
+
+  tg?.HapticFeedback?.selectionChanged();
+}
+
 // ==================== СИСТЕМА СОХРАНЕНИЯ ====================
 
 function saveGame() {
@@ -26,19 +42,14 @@ function loadGame() {
       player = data.player;
       dynastyGeneration = data.dynastyGeneration || 1;
       
-      // Скрываем окно создания
       document.getElementById("creation-overlay").style.display = "none";
-      
-      // Восстанавливаем историю событий
-      if (data.logsHtml) {
-        document.getElementById("logs").innerHTML = data.logsHtml;
-      }
+      if (data.logsHtml) document.getElementById("logs").innerHTML = data.logsHtml;
       
       renderUI();
       return true;
     }
   } catch (e) {
-    console.error("Ошибка загрузки сохранения:", e);
+    console.error("Save load error:", e);
   }
   return false;
 }
@@ -92,7 +103,7 @@ function confirmCreation() {
 }
 
 function randomCreation() {
-  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша", "Люк", "Бадигади", "Линия", "Пурсена"];
+  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша", "Люк", "Бадигади"];
   const randName = names[Math.floor(Math.random() * names.length)];
   const regKeys = Object.keys(REGIONS);
   const randRegKey = regKeys[Math.floor(Math.random() * regKeys.length)];
@@ -104,12 +115,37 @@ function randomCreation() {
   document.getElementById("creation-overlay").style.display = "none";
 }
 
+function generateInitialFamily(regionKey, origin) {
+  let fatherName = "Пол";
+  let motherName = "Зенит";
+  let fatherRole = "Отец • Мечник";
+  let motherRole = "Мать • Целительница";
+
+  if (regionKey === "asura" && origin.id.includes("boreas")) {
+    fatherName = "Филипп Бореас Грейрат";
+    motherName = "Хильда";
+    fatherRole = "Отец • Мэр города Роа";
+    motherRole = "Мать • Знатная дама";
+  } else if (regionKey === "demon") {
+    fatherName = "Рокко Мигурд";
+    motherName = "Рокалия";
+    fatherRole = "Отец • Старейшина деревни";
+    motherRole = "Мать • Травница";
+  }
+
+  return [
+    { id: "father", name: fatherName, role: fatherRole, relation: 80 },
+    { id: "mother", name: motherName, role: motherRole, relation: 95 }
+  ];
+}
+
 function initCharacter(name, regionKey, origin, trait) {
   let baseMana = 20 + (origin.mana || 0) + (trait.mana || 0);
 
   player = {
     name: name,
     generation: dynastyGeneration,
+    regionKey: regionKey,
     region: REGIONS[regionKey].name,
     origin: origin.name,
     trait: trait,
@@ -121,7 +157,8 @@ function initCharacter(name, regionKey, origin, trait) {
     sword: "Нет",
     swordExp: (origin.sword || 0) + (trait.sword || 0),
     intellect: 10 + (origin.int || 0) + (trait.int || 0),
-    coins: origin.coins || 0
+    coins: origin.coins || 0,
+    relations: generateInitialFamily(regionKey, origin)
   };
 
   document.getElementById("logs").innerHTML = "";
@@ -131,6 +168,64 @@ function initCharacter(name, regionKey, origin, trait) {
   
   renderUI();
   saveGame();
+}
+
+// ==================== ОТНОШЕНИЯ (NPC) ====================
+
+function renderRelations() {
+  const container = document.getElementById("relations-list");
+  container.innerHTML = "";
+
+  if (!player || !player.relations) return;
+
+  player.relations.forEach(npc => {
+    const card = document.createElement("div");
+    card.className = "relation-card";
+    card.innerHTML = `
+      <div class="rel-header">
+        <div>
+          <div class="rel-name">${npc.name}</div>
+          <div class="rel-role">${npc.role}</div>
+        </div>
+        <div style="font-size:12px; font-weight:700; color:var(--green);">${npc.relation}%</div>
+      </div>
+      <div class="bar-bg">
+        <div class="bar-fill bar-relation" style="width: ${npc.relation}%;"></div>
+      </div>
+      <div class="rel-actions">
+        <button class="rel-btn" onclick="talkNPC('${npc.id}')">💬 Поговорить</button>
+        <button class="rel-btn" onclick="trainWithNPC('${npc.id}')">⚔️ Учиться</button>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function talkNPC(id) {
+  const npc = player.relations.find(n => n.id === id);
+  if (!npc) return;
+
+  npc.relation = Math.min(100, npc.relation + 5);
+  log(`Вы тепло пообщались с ${npc.name}. Отношения улучшились (+5%)!`);
+  renderRelations();
+  updateUI();
+  switchTab('character');
+}
+
+function trainWithNPC(id) {
+  const npc = player.relations.find(n => n.id === id);
+  if (!npc) return;
+
+  if (player.age < 3) {
+    log(`${npc.name} с улыбкой говорит, что вы еще слишком малы для суровых тренировок.`);
+  } else {
+    npc.relation = Math.min(100, npc.relation + 3);
+    player.swordExp += 10;
+    log(`${npc.name} преподал вам урок дисциплины и стоек! (+Опыт меча)`);
+  }
+  renderRelations();
+  updateUI();
+  switchTab('character');
 }
 
 // ==================== ИГРОВАЯ ЛОГИКА ====================
@@ -166,7 +261,7 @@ function renderUI() {
 
 function updateUI() {
   renderUI();
-  saveGame(); // Автосохранение при любом изменении!
+  saveGame();
 }
 
 function trainMana() {
@@ -180,26 +275,29 @@ function trainMana() {
     player.magic = "Святой 🌟";
     log("⚡ Сквозь тучи ударила молния! Вы признаны <b>Магом Святого Класса</b>!");
   } else {
-    log(`Вы концентрировали ману в кончиках пальцев (+${bonus} к макс. мане).`);
+    log(`Вы концентрировали ману в ладонях (+${bonus} к макс. мане).`);
   }
   updateUI();
+  switchTab('character');
 }
 
 function trainSword() {
   player.swordExp += 15;
   if (player.swordExp >= 45 && player.sword === "Нет") {
     player.sword = "Бог Меча (Ученик) 🗡️";
-    log("Вы освоили длинный выпад и базовую стойку Стиля Бога Меча!");
+    log("Вы освоили длинный выпад Стиля Бога Меча!");
   } else {
     log("Вы отрабатывали удары деревянным клинком до кровавых мозолей.");
   }
   updateUI();
+  switchTab('character');
 }
 
 function readBook() {
   player.intellect += 4;
   log("Вы изучали старинные свитки и карты континентов (+4 к знаниям).");
   updateUI();
+  switchTab('character');
 }
 
 function explore() {
@@ -212,6 +310,7 @@ function explore() {
     log("Вы исследовали местные окрестности и примечали повадки зверей.");
   }
   updateUI();
+  switchTab('character');
 }
 
 function ageUp() {
@@ -220,10 +319,22 @@ function ageUp() {
   player.maxMana += growth;
   player.mana = player.maxMana;
 
-  if (player.age === 3) log("Вы впервые осознанно применили стихию, удивив окружающих.");
-  else if (player.age === 7) log("Вам исполнилось 7 лет — пора делать первые шаги на пути воина или мага.");
-  else if (player.age === 10) log("⚠️ В небесах раздался глухой гул... Плотность маны в атмосфере зашкаливает.");
-  else {
+  // Динамическое появление персонажей в жизни
+  if (player.age === 4) {
+    if (!player.relations.some(n => n.id === "sylphie")) {
+      player.relations.push({ id: "sylphie", name: "Сильфиетта", role: "Подруга детства • Эльфийка", relation: 70 });
+      log("🟢 Вы спасли застенчивую зеленоволосую девочку от хулиганов! Сильфиетта теперь ваш друг.");
+    }
+  } else if (player.age === 5) {
+    if (!player.relations.some(n => n.id === "roxy")) {
+      player.relations.push({ id: "roxy", name: "Рокси Мигурдия", role: "Наставница • Маг Святого Ранга", relation: 65 });
+      log("🧙‍♂️ В дом прибыла репетитор по магии из расы демонов — Рокси Мигурдия!");
+    }
+  } else if (player.age === 7) {
+    log("Вам исполнилось 7 лет — пора делать первые шаги на пути воина или мага.");
+  } else if (player.age === 10) {
+    log("⚠️ В небесах раздался глухой гул... Плотность маны в атмосфере зашкаливает.");
+  } else {
     const events = [
       "Год упорных тренировок и познания таинств мира.",
       "Вы помогали семье по хозяйству, укрепляя тело и выносливость.",
@@ -231,10 +342,10 @@ function ageUp() {
     ];
     log(events[Math.floor(Math.random() * events.length)]);
   }
+
   updateUI();
 }
 
-// Пробуем загрузить сохранение, если его нет — открываем создание
 if (!loadGame()) {
   showCreation();
 }
