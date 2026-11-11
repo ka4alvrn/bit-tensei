@@ -6,6 +6,29 @@
   <meta name="color-scheme" content="dark">
   <title>Bit Tensei</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- Защитные стили: предотвращают развал интерфейса при сбоях GitHub -->
+  <style>
+    :root {
+      --bg: #0b0c10; --card: #151821; --card-border: rgba(255, 255, 255, 0.08);
+      --accent: #9d4edd; --accent-light: #c084fc; --text: #f3f4f6; --muted: #9ca3af;
+      --mana: #38bdf8; --gold: #fbbf24; --hp: #ef4444; --green: #10b981;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      background-color: var(--bg) !important; color: var(--text) !important;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0; padding: 12px; padding-bottom: 95px; user-select: none;
+    }
+    #creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(11, 12, 16, 0.98); z-index: 200; padding: 16px;
+      overflow-y: auto; display: flex; flex-direction: column;
+    }
+    .tab-content { display: none !important; }
+    .tab-content.active { display: block !important; }
+  </style>
+
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -70,7 +93,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно битвы (Дуэли и Монстры) -->
+  <!-- Модальное окно битвы (Дуэли, Монстры, Предательства) -->
   <div id="battle-modal" style="display: none;">
     <div class="battle-sheet">
       <div class="battle-header">
@@ -98,7 +121,7 @@
       <div class="section-title" style="text-align: center; margin-top: 15px;">Выберите наследника рода:</div>
       <div id="heirs-list"></div>
     </div>
-    <button class="btn-main" style="margin-top: 15px;" onclick="startNewDynasty()">🔄 Новая душа (Поколение 1)</button>
+    <button class="btn-main" style="margin-top: 15px;" onclick="startNewDynasty()">🔄 Новая душа (Карма Сансары)</button>
   </div>
 
   <!-- Главная карточка персонажа -->
@@ -121,12 +144,16 @@
       <div>
         <span style="font-size:11px; color:#c7d2fe;">⚡ БОЕВАЯ МОЩЬ:</span>
         <b id="char-cp">150</b>
+        <span id="char-cp-cap-hint" style="font-size:9px; color:#fbbf24; display:block;"></span>
       </div>
-      <div>
-        <span class="world-rank-badge" id="char-guild-badge">Гильдия: Нет</span>
+      <div style="text-align:right;">
+        <span class="world-rank-badge" id="char-guild-badge">Ранг F</span>
         <span class="world-rank-badge" id="char-world-rank">Смертный</span>
       </div>
     </div>
+
+    <!-- Травмы и недуги -->
+    <div id="injuries-banner" style="display:none; margin-top:6px;"></div>
 
     <!-- Полоски параметров -->
     <div class="bar-meta"><span>❤️ Здоровье</span><span id="hp-text">100/100</span></div>
@@ -147,7 +174,8 @@
       <div class="stat">📚 Знания: <b id="intellect">10</b></div>
     </div>
     
-    <div id="school-badge-container" style="margin-top: 8px;"></div>
+    <div id="school-badge-container" style="margin-top: 6px;"></div>
+    <div id="faction-badge-container" style="margin-top: 4px;"></div>
   </div>
 
   <!-- ВКЛАДКА 1: ПЕРСОНАЖ / ЖИЗНЬ -->
@@ -170,7 +198,7 @@
     <div id="activities-container"></div>
   </div>
 
-  <!-- ВКЛАДКА 3: ИНВЕНТАРЬ И СНАРЯЖЕНИЕ -->
+  <!-- ВКЛАДКА 3: ИНВЕНТАРЬ И ПОМЕСТЬЕ -->
   <div id="tab-inventory" class="tab-content">
     <div class="section-title">Текущее Снаряжение</div>
     <div class="equip-grid">
@@ -188,45 +216,58 @@
       </div>
     </div>
 
-    <div class="section-title" style="margin-top: 14px;">Рюкзак Инвентаря</div>
+    <!-- Поместье Рода -->
+    <div class="section-title" style="margin-top: 14px;">🏰 Поместье и Семейная Недвижимость</div>
+    <div id="estate-container"></div>
+
+    <div class="section-title" style="margin-top: 14px;">🎒 Рюкзак Инвентаря</div>
     <div id="inventory-list"></div>
 
-    <div class="section-title" style="margin-top: 14px;">Рынок и Торговцы Региона</div>
+    <div class="section-title" style="margin-top: 14px;">🛒 Рынок Региона и Протезы</div>
     <div id="shop-list"></div>
   </div>
 
-  <!-- ВКЛАДКА 4: ГИЛЬДИЯ И ЛАБИРИНТЫ -->
+  <!-- ВКЛАДКА 4: ГИЛЬДИЯ, ОТРЯД И ЛАБИРИНТЫ -->
   <div id="tab-guild" class="tab-content">
-    <div class="card" style="margin-bottom:12px; background:#181b26;">
+    <!-- Боевой Отряд -->
+    <div class="card" style="margin-bottom:10px; background:#181b26;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
-          <b style="font-size:14px; color:#fff;">Доска Гильдии Авантюристов</b>
+          <b style="font-size:13px; color:#fff;">🛡️ Боевой Отряд (<span id="squad-count">1</span>/6)</b>
+          <div style="font-size:11px; color:var(--muted);">Мощь отряда: <b id="squad-cp" style="color:#a78bfa;">150</b> • Слава: <b id="squad-fame" style="color:var(--gold);">0</b></div>
+        </div>
+      </div>
+      <div id="squad-members-list" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Доска Гильдии -->
+    <div class="card" style="margin-bottom:10px; background:#181b26;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <b style="font-size:13px; color:#fff;">Гильдия Авантюристов</b>
           <div style="font-size:11px; color:var(--muted);">Репутация: <span id="guild-exp-text">0/30 GP</span></div>
         </div>
         <span class="tag badge-legendary" id="guild-status-tag">Ранг: F</span>
       </div>
     </div>
 
-    <!-- Раздел Лабиринтов -->
     <div class="section-title">🏛️ Исследование Лабиринтов и Подземелий</div>
     <div id="dungeon-container"></div>
 
-    <!-- Годовые контракты -->
-    <div class="section-title" style="margin-top: 16px;">📜 Годовые Заказы Гильдии (Обновляются каждый год)</div>
+    <div class="section-title" style="margin-top: 16px;">📜 Годовые Контракты Гильдии</div>
     <div id="guild-quests-list"></div>
 
-    <!-- Монумент Семи Сил -->
     <div class="section-title" style="margin-top: 16px;">🏆 Монумент Семи Великих Сил Мира</div>
     <div class="powers-monument" id="powers-monument-list"></div>
   </div>
 
   <!-- ВКЛАДКА 5: СВЯЗИ И МИР -->
   <div id="tab-relations" class="tab-content">
-    <div class="section-title">👥 Близкие, Семья и Знакомые (Нажмите для действий)</div>
+    <div class="section-title">👥 Близкие, Семья и Знакомые</div>
     <button class="btn-find" onclick="meetStranger()">🔍 Искать новые знакомства в городе</button>
     <div id="relations-list"></div>
 
-    <div class="section-title" style="margin-top: 18px;">🌍 Путешествия по Шестиликому Миру (Занимает 1 год)</div>
+    <div class="section-title" style="margin-top: 18px;">🌍 Путешествия по Шестиликому Миру (1 год пути)</div>
     <div id="world-travel-list"></div>
 
     <div class="section-title" style="margin-top: 16px;">🏛️ Академии и Университеты</div>
