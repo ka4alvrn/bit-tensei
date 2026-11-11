@@ -1,141 +1,31 @@
-:root {
-  --bg: #0b0c10;
-  --card: #151821;
-  --card-border: rgba(255, 255, 255, 0.08);
-  --accent: #9d4edd;
-  --accent-light: #c084fc;
-  --text: #f3f4f6;
-  --muted: #9ca3af;
-  --mana: #38bdf8;
-  --gold: #fbbf24;
-  --hp: #ef4444;
-  --green: #10b981;
+/* Бейджи статусов отношений */
+.status-enemy { color: #f87171 !important; }
+.status-friend { color: #34d399 !important; }
+.status-love { color: #f472b6 !important; }
+.status-married { color: #fbbf24 !important; font-weight: 800; }
+
+.badge-canon {
+  font-size: 9px; background: rgba(251, 191, 36, 0.2); color: #fbbf24;
+  border: 1px solid rgba(251, 191, 36, 0.4); padding: 2px 5px; border-radius: 4px; margin-left: 4px;
 }
 
-* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-body {
-  margin: 0;
-  padding: 12px;
-  padding-bottom: 95px; /* Запас под нижнее меню */
-  background: var(--bg);
-  color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  user-select: none;
-}
-
-/* Окно создания персонажа */
-#creation-overlay {
+/* Модальное окно взаимодействия с NPC */
+#npc-modal {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(11, 12, 16, 0.98); z-index: 200;
-  padding: 16px; overflow-y: auto; display: flex; flex-direction: column;
+  background: rgba(11, 12, 16, 0.95); z-index: 150;
+  display: none; flex-direction: column; justify-content: flex-end;
 }
-.modal-title { font-size: 22px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 4px; }
-.modal-sub { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px; }
-
-.input-group { margin-bottom: 12px; }
-label { font-size: 11px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; }
-input, select {
-  width: 100%; padding: 12px; background: #1c202c; border: 1px solid var(--card-border);
-  color: #fff; border-radius: 10px; font-size: 14px; outline: none;
+.npc-sheet {
+  background: var(--card); border-top: 1px solid var(--card-border);
+  border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto;
 }
+.sheet-header { text-align: center; margin-bottom: 16px; }
+.sheet-name { font-size: 20px; font-weight: 800; }
+.sheet-sub { font-size: 12px; color: var(--muted); margin-top: 3px; }
 
-/* Вкладки */
-.tab-content { display: none; }
-.tab-content.active { display: block; animation: fadeIn 0.2s ease-in-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
-
-/* Карточка персонажа */
-.card {
-  background: var(--card); border-radius: 16px; padding: 14px;
-  border: 1px solid var(--card-border); margin-bottom: 10px;
+.npc-actions-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px;
 }
-.header { display: flex; justify-content: space-between; align-items: flex-start; }
-.name { font-size: 18px; font-weight: 700; }
-.gen-badge { font-size: 10px; background: #272a38; color: var(--muted); padding: 2px 6px; border-radius: 4px; }
-
-.badge-common { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4); }
-.badge-rare { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
-.badge-epic { background: rgba(192, 132, 252, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
-.badge-legendary { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid rgba(251, 191, 36, 0.4); }
-.badge-mythic { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
-
-.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
-.region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; }
-
-.bar-bg { height: 7px; background: #232734; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-.bar-fill { height: 100%; transition: width 0.3s; }
-.bar-mana { background: var(--mana); }
-.bar-relation { background: var(--green); }
-
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
-.stat { background: #1a1e29; padding: 7px 10px; border-radius: 8px; }
-
-/* Лог событий */
-.log-box {
-  background: var(--card); border-radius: 14px; padding: 12px; height: 260px;
-  overflow-y: auto; font-size: 13px; line-height: 1.45; border: 1px solid var(--card-border);
-  margin-bottom: 10px;
-}
-.log-entry { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.log-year { color: var(--accent); font-weight: 700; }
-
-/* Кнопки */
-button {
-  background: #1e222e; color: #fff; border: 1px solid var(--card-border);
-  padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
-}
-button:active { transform: scale(0.97); background: #282d3d; }
-
-.btn-main {
-  width: 100%; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
-  padding: 16px; font-size: 16px; border: none; font-weight: 700;
-  box-shadow: 0 4px 15px rgba(157, 78, 221, 0.35); border-radius: 14px; margin-bottom: 8px;
-}
-.btn-secondary {
-  background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted);
-  width: 100%; padding: 8px; font-size: 11px; border-radius: 8px;
-}
-
-/* Отношения (Карточки NPC) */
-.relation-card {
-  background: var(--card); border-radius: 14px; padding: 12px;
-  border: 1px solid var(--card-border); margin-bottom: 8px;
-}
-.rel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
-.rel-name { font-size: 14px; font-weight: 700; }
-.rel-role { font-size: 11px; color: var(--muted); }
-.rel-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
-.rel-btn { padding: 8px; font-size: 12px; border-radius: 8px; }
-
-/* Активности (Список действий) */
-.section-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; margin: 12px 0 6px; }
-.activity-card {
-  background: var(--card); border-radius: 12px; padding: 12px;
-  border: 1px solid var(--card-border); margin-bottom: 8px;
-  display: flex; justify-content: space-between; align-items: center;
-}
-.act-info { display: flex; flex-direction: column; gap: 2px; }
-.act-name { font-size: 14px; font-weight: 600; }
-.act-desc { font-size: 11px; color: var(--muted); }
-.act-btn { padding: 8px 14px; font-size: 12px; border-radius: 8px; background: #262b3a; }
-
-/* Нижний бар навигации (Bottom Bar) */
-.bottom-nav {
-  position: fixed; bottom: 0; left: 0; right: 0;
-  height: 70px;
-  padding-bottom: env(safe-area-inset-bottom, 10px);
-  background: rgba(15, 17, 23, 0.85);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border-top: 1px solid var(--card-border);
-  display: flex; justify-content: space-around; align-items: center;
-  z-index: 100;
-}
-.nav-item {
-  background: none; border: none; padding: 6px 12px;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  color: var(--muted); font-size: 11px; font-weight: 600;
-}
-.nav-item .icon { font-size: 20px; transition: transform 0.2s; }
-.nav-item.active { color: var(--accent-light); }
-.nav-item.active .icon { transform: scale(1.15); filter: drop-shadow(0 0 6px rgba(157, 78, 221, 0.6)); }
+.action-danger { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.4); color: #f87171; }
+.action-love { background: rgba(244, 114, 182, 0.15); border-color: rgba(244, 114, 182, 0.4); color: #f472b6; }
+.action-married { background: rgba(251, 191, 36, 0.2); border-color: var(--gold); color: var(--gold); grid-column: span 2; }
