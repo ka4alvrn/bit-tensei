@@ -18,55 +18,53 @@ function populateRegionSelect() {
     opt.innerText = REGIONS[key].name;
     regSelect.appendChild(opt);
   }
-  updateFamilySelect();
+  updateOriginSelect();
 }
 
-function updateFamilySelect() {
+function updateOriginSelect() {
   const regKey = document.getElementById("select-region").value;
-  const famSelect = document.getElementById("select-family");
-  famSelect.innerHTML = "";
-  REGIONS[regKey].families.forEach(f => {
+  const origSelect = document.getElementById("select-origin");
+  origSelect.innerHTML = "";
+  REGIONS[regKey].origins.forEach(o => {
     let opt = document.createElement("option");
-    opt.value = f.id;
-    opt.innerText = f.name;
-    famSelect.appendChild(opt);
+    opt.value = o.id;
+    opt.innerText = o.name;
+    origSelect.appendChild(opt);
   });
 }
 
 function confirmCreation() {
   const name = document.getElementById("input-name").value.trim() || "Безымянный";
   const regKey = document.getElementById("select-region").value;
-  const famId = document.getElementById("select-family").value;
-  const family = REGIONS[regKey].families.find(f => f.id === famId);
-  
-  // Крутим талант по честным шансам
+  const origId = document.getElementById("select-origin").value;
+  const origin = REGIONS[regKey].origins.find(o => o.id === origId);
   const trait = rollTrait();
 
-  initCharacter(name, regKey, family, trait);
+  initCharacter(name, regKey, origin, trait);
   document.getElementById("creation-overlay").style.display = "none";
 }
 
 function randomCreation() {
-  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша"];
+  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша", "Люк", "Бадигади", "Линия", "Пурсена"];
   const randName = names[Math.floor(Math.random() * names.length)];
   const regKeys = Object.keys(REGIONS);
   const randRegKey = regKeys[Math.floor(Math.random() * regKeys.length)];
   const region = REGIONS[randRegKey];
-  const randFam = region.families[Math.floor(Math.random() * region.families.length)];
+  const randOrigin = region.origins[Math.floor(Math.random() * region.origins.length)];
   const trait = rollTrait();
 
-  initCharacter(randName, randRegKey, randFam, trait);
+  initCharacter(randName, randRegKey, randOrigin, trait);
   document.getElementById("creation-overlay").style.display = "none";
 }
 
-function initCharacter(name, regionKey, family, trait) {
-  let baseMana = 20 + (family.mana || 0) + (trait.mana || 0);
+function initCharacter(name, regionKey, origin, trait) {
+  let baseMana = 20 + (origin.mana || 0) + (trait.mana || 0);
 
   player = {
     name: name,
     generation: dynastyGeneration,
     region: REGIONS[regionKey].name,
-    family: family.name,
+    origin: origin.name,
     trait: trait,
     age: 0,
     mana: baseMana,
@@ -74,14 +72,14 @@ function initCharacter(name, regionKey, family, trait) {
     magic: "Новичок",
     magicExp: 0,
     sword: "Нет",
-    swordExp: trait.sword || 0,
-    intellect: 10 + (family.int || 0) + (trait.int || 0),
-    coins: family.coins || 0
+    swordExp: (origin.sword || 0) + (trait.sword || 0),
+    intellect: 10 + (origin.int || 0) + (trait.int || 0),
+    coins: origin.coins || 0
   };
 
   document.getElementById("logs").innerHTML = "";
   log(`🌍 Вы родились: <b>${player.region}</b>`);
-  log(family.log);
+  log(origin.log);
   log(`✨ Врожденный дар: <b class="tag badge-${trait.rarity}">${trait.name}</b> (${trait.desc})`);
   updateUI();
 }
@@ -166,13 +164,13 @@ function ageUp() {
   player.maxMana += growth;
   player.mana = player.maxMana;
 
-  if (player.age === 3) log("Вы впервые осознанно применили стихию, удивив родителей.");
-  else if (player.age === 7) log("Вам исполнилось 7 лет. Время выбирать: стать мечником, магом или ремесленником.");
+  if (player.age === 3) log("Вы впервые осознанно применили стихию, удивив окружающих.");
+  else if (player.age === 7) log("Вам исполнилось 7 лет — пора делать первые шаги на пути воина или мага.");
   else if (player.age === 10) log("⚠️ В небесах раздался глухой гул... Плотность маны в атмосфере зашкаливает.");
   else {
     const events = [
-      "Год упорных тренировок и постижения таинств мира.",
-      "Вы помогали семье по хозяйству, укрепляя выносливость.",
+      "Год упорных тренировок и познания таинств мира.",
+      "Вы помогали семье по хозяйству, укрепляя тело и выносливость.",
       "Спокойный год за чтением книг в тишине."
     ];
     log(events[Math.floor(Math.random() * events.length)]);
@@ -180,5 +178,4 @@ function ageUp() {
   updateUI();
 }
 
-// Запуск при старте
 showCreation();
