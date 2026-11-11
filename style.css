@@ -1,263 +1,182 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <meta name="color-scheme" content="dark">
-  <title>Bit Tensei</title>
-  <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <link rel="stylesheet" href="./style.css">
-</head>
-<body>
+:root {
+  --bg: #0b0c10;
+  --card: #151821;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent: #9d4edd;
+  --accent-light: #c084fc;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --mana: #38bdf8;
+  --gold: #fbbf24;
+  --hp: #ef4444;
+  --green: #10b981;
+}
 
-  <!-- Окно создания персонажа -->
-  <div id="creation-overlay">
-    <div class="modal-title">🔮 Колесо Сансары</div>
-    <div class="modal-sub">Сотворите судьбу для перерождения в Шестиликом Мире</div>
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-    <div class="input-group">
-      <label>Имя и Фамилия героя</label>
-      <div style="display: flex; gap: 8px;">
-        <input type="text" id="input-name" placeholder="Имя (напр. Рудеус)">
-        <input type="text" id="input-surname" placeholder="Фамилия (напр. Грейрат)">
-      </div>
-      <button class="btn-secondary" style="margin-top: 6px;" onclick="randomizeNameInputs()">🎲 Подобрать случайное имя</button>
-    </div>
+html, body {
+  background-color: var(--bg) !important;
+  color: var(--text) !important;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0; padding: 12px; padding-bottom: 95px;
+  user-select: none; -webkit-user-select: none;
+}
 
-    <div class="input-group">
-      <label>Раса Персонажа</label>
-      <select id="select-race" onchange="updateRaceInfo()"></select>
-      <div id="race-desc" class="helper-text"></div>
-    </div>
+#creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(11, 12, 16, 0.98); z-index: 200;
+  padding: 16px; overflow-y: auto; display: flex; flex-direction: column;
+}
 
-    <div class="input-group">
-      <label>Регион Рождения</label>
-      <select id="select-region" onchange="updateOriginSelect()"></select>
-    </div>
+.modal-title { font-size: 20px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 2px; }
+.modal-sub { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 14px; }
+.helper-text { font-size: 11px; color: var(--accent-light); margin-top: 4px; }
 
-    <div class="input-group">
-      <label>Родословная и Семья</label>
-      <select id="select-origin"></select>
-    </div>
+.input-group { margin-bottom: 10px; }
+label { font-size: 10px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; }
+input, select {
+  width: 100%; padding: 10px 12px; background: #1c202c; border: 1px solid var(--card-border);
+  color: #fff !important; border-radius: 10px; font-size: 13px; outline: none;
+}
 
-    <div class="input-group">
-      <label>Врожденное Благословение</label>
-      <select id="select-trait"></select>
-    </div>
+.tab-content { display: none !important; }
+.tab-content.active { display: block !important; }
 
-    <button class="btn-main" onclick="confirmCreation()">✨ Начать жизнь в новом теле</button>
-    <button class="btn-random" onclick="randomCreation()">🎲 Полный рандом богов</button>
-  </div>
+/* Подвкладки в разделе Дела */
+.sub-nav {
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;
+  scrollbar-width: none;
+}
+.sub-nav::-webkit-scrollbar { display: none; }
+.sub-tab-btn {
+  background: #1c202c; border: 1px solid var(--card-border); color: var(--muted) !important;
+  padding: 6px 12px; font-size: 11px; border-radius: 8px; white-space: nowrap; font-weight: 600;
+}
+.sub-tab-btn.active {
+  background: #4338ca; border-color: #6366f1; color: #fff !important;
+}
 
-  <!-- Модальное окно рождения персонажа -->
-  <div id="birth-modal" style="display: none;">
-    <div class="birth-sheet">
-      <div style="font-size: 40px; margin-bottom: 6px;">👶✨</div>
-      <div class="modal-title" style="color: var(--accent-light);">Душа Воплотилась!</div>
-      <div class="modal-sub">Первый крик новорожденного огласил окрестности</div>
-      <div class="birth-card" id="birth-card-content"></div>
-      <button class="btn-main" style="margin-top: 14px;" onclick="closeBirthModal()">🚀 Сделать первый вдох</button>
-    </div>
-  </div>
+.card {
+  background: var(--card); border-radius: 16px; padding: 14px;
+  border: 1px solid var(--card-border); margin-bottom: 10px;
+}
+.header { display: flex; justify-content: space-between; align-items: flex-start; }
+.name { font-size: 17px; font-weight: 700; color: #fff; }
+.year-text { font-size: 11px; font-weight: 700; color: var(--gold); }
+.age-text { font-weight: 700; color: var(--accent); font-size: 14px; }
 
-  <!-- Интерактивное событие с выбором (BitLife Event Modal) -->
-  <div id="event-modal" style="display: none;">
-    <div class="event-sheet">
-      <div class="event-icon" id="event-icon">⚡</div>
-      <div class="event-title" id="event-title">Событие Года</div>
-      <div class="event-desc" id="event-desc">Описание ситуации...</div>
-      <div class="event-choices" id="event-choices"></div>
-    </div>
-  </div>
+.ap-badge {
+  font-size: 10px; background: #312e81; color: #a5b4fc;
+  padding: 2px 7px; border-radius: 6px; font-weight: 700; border: 1px solid #4f46e5;
+  margin-top: 3px; display: inline-block;
+}
 
-  <!-- Модальное окно битвы (Дуэли и Монстры) -->
-  <div id="battle-modal" style="display: none;">
-    <div class="battle-sheet">
-      <div class="battle-header">
-        <span id="battle-enemy-name">Противник</span>
-        <span class="badge-mythic" id="battle-enemy-cp">БМ: 250</span>
-      </div>
-      <div class="bar-meta"><span>Здоровье врага</span><span id="battle-enemy-hp-text">100/100</span></div>
-      <div class="bar-bg"><div class="bar-fill bar-hp" id="battle-enemy-hp-bar" style="width: 100%;"></div></div>
-      <div class="battle-log" id="battle-log">Схватка началась!</div>
-      <div class="battle-actions">
-        <button onclick="combatAction('sword')">⚔️ Удар клинком</button>
-        <button onclick="combatAction('magic')">🔮 Заклинание маны</button>
-        <button onclick="combatAction('potion')">🧪 Зелье (+50 HP)</button>
-        <button class="action-danger" onclick="combatAction('flee')">🏃 Отступить</button>
-      </div>
-    </div>
-  </div>
+.cp-banner {
+  background: linear-gradient(90deg, #1e1b4b, #2e1065); border: 1px solid #7c3aed;
+  border-radius: 10px; padding: 8px 12px; margin-top: 8px; display: flex;
+  justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;
+}
+.cp-banner b { font-size: 15px; color: #a78bfa; }
+.world-rank-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #4c1d95; color: #ddd6fe; margin-left: 4px; }
 
-  <!-- Экран Смерти и Наследования -->
-  <div id="death-overlay" style="display: none;">
-    <div class="modal-title" style="color: #ef4444;">💀 Конец Жизненного Пути</div>
-    <div class="modal-sub" id="death-reason">Вы прожили славную жизнь...</div>
-    <div class="death-summary" id="death-summary"></div>
-    <div id="heir-selection-block">
-      <div class="section-title" style="text-align: center; margin-top: 15px;">Выберите наследника рода:</div>
-      <div id="heirs-list"></div>
-    </div>
-    <button class="btn-main" style="margin-top: 15px;" onclick="startNewDynasty()">🔄 Новая душа (Поколение 1)</button>
-  </div>
+.badge-common { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4); }
+.badge-rare { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+.badge-epic { background: rgba(192, 132, 252, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
+.badge-legendary { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid rgba(251, 191, 36, 0.4); }
+.badge-mythic { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; }
 
-  <!-- Главная карточка персонажа -->
-  <div class="card">
-    <div class="header">
-      <div>
-        <div class="name" id="char-name">Имя</div>
-        <div class="region-badge" id="char-region">Регион</div>
-        <div id="char-trait" class="tag">Талант</div>
-      </div>
-      <div style="text-align: right;">
-        <div class="year-text" id="world-year">407 г. К.Д.</div>
-        <div class="age-text" id="age">0 лет</div>
-        <div class="ap-badge" id="char-ap">⚡ 5/5 сил</div>
-      </div>
-    </div>
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+.region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; }
 
-    <!-- Общая боевая мощь и ранг гильдии -->
-    <div class="cp-banner">
-      <div>
-        <span style="font-size:11px; color:#c7d2fe;">⚡ БОЕВАЯ МОЩЬ:</span>
-        <b id="char-cp">150</b>
-      </div>
-      <div>
-        <span class="world-rank-badge" id="char-guild-badge">Гильдия: Нет</span>
-        <span class="world-rank-badge" id="char-world-rank">Смертный</span>
-      </div>
-    </div>
+.bar-meta { font-size: 11px; display: flex; justify-content: space-between; color: var(--text); }
+.bar-bg { height: 7px; background: #232734; border-radius: 4px; overflow: hidden; margin-top: 3px; }
+.bar-fill { height: 100%; transition: width 0.3s; }
+.bar-mana { background: var(--mana); }
+.bar-hp { background: var(--hp); }
+.bar-relation { background: var(--green); }
 
-    <!-- Полоски параметров -->
-    <div class="bar-meta"><span>❤️ Здоровье</span><span id="hp-text">100/100</span></div>
-    <div class="bar-bg"><div class="bar-fill bar-hp" id="hp-bar" style="width: 100%;"></div></div>
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
+.stat { background: #1a1e29; padding: 7px 10px; border-radius: 8px; color: var(--text); }
 
-    <div class="bar-meta" style="margin-top: 6px;">
-      <span>🔮 Сосуд Маны <small id="mana-status" style="color:var(--muted); font-size:10px;"></small></span>
-      <span id="mana-text">30/30</span>
-    </div>
-    <div class="bar-bg"><div class="bar-fill bar-mana" id="mana-bar" style="width: 100%;"></div></div>
+.log-box {
+  background: var(--card); border-radius: 14px; padding: 12px; height: 260px;
+  overflow-y: auto; font-size: 13px; line-height: 1.45; border: 1px solid var(--card-border);
+  margin-bottom: 10px; color: var(--text);
+}
+.log-entry { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-year { color: var(--accent); font-weight: 700; font-size: 11px; }
 
-    <div class="stats">
-      <div class="stat">🧙 Магия: <b id="magic">Новичок</b></div>
-      <div class="stat">🪙 Золото: <b id="coins">0</b></div>
-      <div class="stat">⚔️ Бог Меча: <b id="sword-god">Нет</b></div>
-      <div class="stat">💧 Бог Воды: <b id="water-god">Нет</b></div>
-      <div class="stat">🌪️ Бог Севера: <b id="north-god">Нет</b></div>
-      <div class="stat">📚 Знания: <b id="intellect">10</b></div>
-    </div>
-    
-    <div id="school-badge-container" style="margin-top: 8px;"></div>
-  </div>
+button {
+  background: #1e222e; color: #fff !important; border: 1px solid var(--card-border);
+  padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+button:active { transform: scale(0.97); background: #282d3d; }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
-  <!-- ВКЛАДКА 1: ПЕРСОНАЖ / ЖИЗНЬ -->
-  <div id="tab-character" class="tab-content active">
-    <div class="log-box" id="logs"></div>
-    <button class="btn-main" onclick="ageUp()">⏳ Прожить 1 год (Восстановить силы)</button>
-    <button class="btn-secondary" onclick="confirmReset()">🔄 Сдаться и переродиться</button>
-  </div>
+.btn-main {
+  width: 100%; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
+  padding: 15px; font-size: 15px; border: none; font-weight: 700;
+  box-shadow: 0 4px 15px rgba(157, 78, 221, 0.35); border-radius: 12px; margin-bottom: 8px;
+}
+.btn-random { background: #252a38; border: none; width: 100%; padding: 11px; border-radius: 10px; color: #fff; }
+.btn-secondary { background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted) !important; width: 100%; padding: 8px; font-size: 11px; border-radius: 8px; }
+.btn-find { width: 100%; margin-bottom: 10px; background: #262c3d; font-size: 13px; }
+.action-danger { background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.4) !important; color: #f87171 !important; }
+.action-love { background: rgba(244, 114, 182, 0.15) !important; border-color: rgba(244, 114, 182, 0.4) !important; color: #f472b6 !important; }
+.action-married { background: rgba(251, 191, 36, 0.2) !important; border-color: var(--gold) !important; color: var(--gold) !important; }
 
-  <!-- ВКЛАДКА 2: АКТИВНОСТИ И ОБУЧЕНИЕ -->
-  <div id="tab-activities" class="tab-content">
-    <div class="sub-nav">
-      <button class="sub-tab-btn active" onclick="setActivityCategory('all', this)">🌟 Все</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('childhood', this)">👶 Детство</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('magic', this)">🔮 Магия</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('combat', this)">⚔️ Бой</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('school', this)">🎓 Академия</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('life', this)">🛠️ Быт</button>
-    </div>
-    <div id="activities-container"></div>
-  </div>
+/* Взаимодействия прямо под персонажем */
+.npc-inline-actions {
+  background: #141722; border-top: 1px solid var(--card-border);
+  padding: 10px; margin-top: 8px; border-radius: 0 0 10px 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
 
-  <!-- ВКЛАДКА 3: ИНВЕНТАРЬ И СНАРЯЖЕНИЕ -->
-  <div id="tab-inventory" class="tab-content">
-    <div class="section-title">Текущее Снаряжение</div>
-    <div class="equip-grid">
-      <div class="equip-slot" onclick="unequipSlot('weapon')">
-        <div class="slot-label">Оружие</div>
-        <div class="slot-val" id="slot-weapon">Кулаки</div>
-      </div>
-      <div class="equip-slot" onclick="unequipSlot('armor')">
-        <div class="slot-label">Броня</div>
-        <div class="slot-val" id="slot-armor">Одежда</div>
-      </div>
-      <div class="equip-slot" onclick="unequipSlot('accessory')">
-        <div class="slot-label">Реликвия</div>
-        <div class="slot-val" id="slot-accessory">Нет</div>
-      </div>
-    </div>
+.birth-sheet, .event-sheet, .battle-sheet {
+  background: var(--card); border: 1px solid var(--card-border);
+  border-radius: 20px; padding: 20px; max-width: 460px; margin: auto; text-align: center;
+}
+.birth-card { background: #1a1e29; border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; margin-top: 10px; text-align: left; font-size: 12px; line-height: 1.6; }
+.event-icon { font-size: 40px; margin-bottom: 8px; }
+.event-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
+.event-desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+.event-choices { display: flex; flex-direction: column; gap: 8px; }
+.event-choice-btn { width: 100%; padding: 12px; text-align: center; font-size: 13px; background: #232734; border-radius: 10px; border: 1px solid var(--card-border); }
 
-    <div class="section-title" style="margin-top: 14px;">Рюкзак Инвентаря</div>
-    <div id="inventory-list"></div>
+.battle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 700; }
+.battle-log { height: 110px; background: #0f1117; border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 12px; margin: 12px 0; border: 1px solid var(--card-border); color: #d1d5db; }
+.battle-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-    <div class="section-title" style="margin-top: 14px;">Рынок и Торговцы Региона</div>
-    <div id="shop-list"></div>
-  </div>
+.equip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+.equip-slot { background: #1c202c; border: 1px solid var(--card-border); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; }
+.slot-label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+.slot-val { font-size: 12px; font-weight: 700; color: #fff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  <!-- ВКЛАДКА 4: ГИЛЬДИЯ И ЛАБИРИНТЫ -->
-  <div id="tab-guild" class="tab-content">
-    <div class="card" style="margin-bottom:12px; background:#181b26;">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-          <b style="font-size:14px; color:#fff;">Доска Гильдии Авантюристов</b>
-          <div style="font-size:11px; color:var(--muted);">Репутация: <span id="guild-exp-text">0/30 GP</span></div>
-        </div>
-        <span class="tag badge-legendary" id="guild-status-tag">Ранг: F</span>
-      </div>
-    </div>
+.powers-monument { background: #12141c; border-radius: 12px; border: 1px solid var(--card-border); padding: 8px; }
+.power-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 10px; border-bottom: 1px solid rgba(255,255,255,0.04); font-size: 12px; }
+.power-row:last-child { border-bottom: none; }
+.power-rank { font-weight: 800; color: var(--gold); width: 25px; }
+.power-player { background: rgba(157, 78, 221, 0.15); border-radius: 6px; }
 
-    <!-- Раздел Лабиринтов -->
-    <div class="section-title">🏛️ Исследование Лабиринтов и Подземелий</div>
-    <div id="dungeon-container"></div>
+.section-title { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; margin: 14px 0 6px; }
+.activity-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card {
+  background: var(--card); border-radius: 12px; padding: 12px;
+  border: 1px solid var(--card-border); margin-bottom: 8px;
+}
+.quest-card, .shop-item, .travel-card { display: flex; justify-content: space-between; align-items: center; }
 
-    <!-- Годовые контракты -->
-    <div class="section-title" style="margin-top: 16px;">📜 Годовые Заказы Гильдии (Обновляются каждый год)</div>
-    <div id="guild-quests-list"></div>
-
-    <!-- Монумент Семи Сил -->
-    <div class="section-title" style="margin-top: 16px;">🏆 Монумент Семи Великих Сил Мира</div>
-    <div class="powers-monument" id="powers-monument-list"></div>
-  </div>
-
-  <!-- ВКЛАДКА 5: СВЯЗИ И МИР -->
-  <div id="tab-relations" class="tab-content">
-    <div class="section-title">👥 Близкие, Семья и Знакомые (Нажмите для действий)</div>
-    <button class="btn-find" onclick="meetStranger()">🔍 Искать новые знакомства в городе</button>
-    <div id="relations-list"></div>
-
-    <div class="section-title" style="margin-top: 18px;">🌍 Путешествия по Шестиликому Миру (Занимает 1 год)</div>
-    <div id="world-travel-list"></div>
-
-    <div class="section-title" style="margin-top: 16px;">🏛️ Академии и Университеты</div>
-    <div id="schools-list"></div>
-  </div>
-
-  <!-- Нижняя панель навигации -->
-  <div class="bottom-nav">
-    <button class="nav-item active" onclick="switchTab('character')">
-      <span class="icon">👤</span>
-      <span>Жизнь</span>
-    </button>
-    <button class="nav-item" onclick="switchTab('activities')">
-      <span class="icon">⚡</span>
-      <span>Дела</span>
-    </button>
-    <button class="nav-item" onclick="switchTab('inventory')">
-      <span class="icon">🎒</span>
-      <span>Вещи</span>
-    </button>
-    <button class="nav-item" onclick="switchTab('guild')">
-      <span class="icon">⚔️</span>
-      <span>Гильдия</span>
-    </button>
-    <button class="nav-item" onclick="switchTab('relations')">
-      <span class="icon">👥</span>
-      <span>Связи</span>
-    </button>
-  </div>
-
-  <script src="./data.js"></script>
-  <script src="./app.js"></script>
-</body>
-</html>
+.bottom-nav {
+  position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
+  padding-bottom: env(safe-area-inset-bottom, 10px);
+  background: rgba(15, 17, 23, 0.95); backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--card-border);
+  display: flex; justify-content: space-around; align-items: center; z-index: 100;
+}
+.nav-item {
+  background: none; border: none; padding: 6px 10px;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  color: var(--muted) !important; font-size: 10px; font-weight: 600;
+}
+.nav-item .icon { font-size: 18px; }
+.nav-item.active { color: var(--accent-light) !important; }
+.nav-item.active .icon { transform: scale(1.15); filter: drop-shadow(0 0 6px rgba(157, 78, 221, 0.6)); }
