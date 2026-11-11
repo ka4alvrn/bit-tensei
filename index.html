@@ -70,11 +70,11 @@
     </div>
   </div>
 
-  <!-- Модальное окно битвы в Гильдии -->
+  <!-- Модальное окно битвы (Дуэли и Монстры) -->
   <div id="battle-modal" style="display: none;">
     <div class="battle-sheet">
       <div class="battle-header">
-        <span id="battle-enemy-name">Гоблин-разведчик</span>
+        <span id="battle-enemy-name">Противник</span>
         <span class="badge-mythic" id="battle-enemy-cp">БМ: 250</span>
       </div>
       <div class="bar-meta"><span>Здоровье врага</span><span id="battle-enemy-hp-text">100/100</span></div>
@@ -83,7 +83,7 @@
       <div class="battle-actions">
         <button onclick="combatAction('sword')">⚔️ Удар клинком</button>
         <button onclick="combatAction('magic')">🔮 Заклинание маны</button>
-        <button onclick="combatAction('potion')">🧪 Выпить зелье (+50 HP)</button>
+        <button onclick="combatAction('potion')">🧪 Зелье (+50 HP)</button>
         <button class="action-danger" onclick="combatAction('flee')">🏃 Отступить</button>
       </div>
     </div>
@@ -101,21 +101,6 @@
     <button class="btn-main" style="margin-top: 15px;" onclick="startNewDynasty()">🔄 Новая душа (Поколение 1)</button>
   </div>
 
-  <!-- Модальное окно действий с NPC -->
-  <div id="npc-modal" onclick="closeNPCModal()">
-    <div class="npc-sheet" onclick="event.stopPropagation()">
-      <div class="sheet-header">
-        <div class="sheet-name" id="modal-npc-name">Имя NPC</div>
-        <div class="sheet-sub" id="modal-npc-sub">Раса • Роль</div>
-        <div class="sheet-status-box">
-          Статус: <b id="modal-npc-status">Друг</b> (<span id="modal-npc-rel">70%</span>)
-        </div>
-      </div>
-      <div class="npc-actions-grid" id="modal-npc-buttons"></div>
-      <button class="btn-close-modal" onclick="closeNPCModal()">Назад</button>
-    </div>
-  </div>
-
   <!-- Главная карточка персонажа -->
   <div class="card">
     <div class="header">
@@ -131,11 +116,16 @@
       </div>
     </div>
 
-    <!-- Общая боевая мощь (Combat Power) -->
+    <!-- Общая боевая мощь и ранг гильдии -->
     <div class="cp-banner">
-      <span>⚡ БОЕВАЯ МОЩЬ (БМ):</span>
-      <b id="char-cp">150</b>
-      <span class="world-rank-badge" id="char-world-rank">Смертный</span>
+      <div>
+        <span style="font-size:11px; color:#c7d2fe;">⚡ БОЕВАЯ МОЩЬ:</span>
+        <b id="char-cp">150</b>
+      </div>
+      <div>
+        <span class="world-rank-badge" id="char-guild-badge">Гильдия: Нет</span>
+        <span class="world-rank-badge" id="char-world-rank">Смертный</span>
+      </div>
     </div>
 
     <!-- Полоски параметров -->
@@ -167,10 +157,10 @@
     <button class="btn-secondary" onclick="confirmReset()">🔄 Сдаться и переродиться</button>
   </div>
 
-  <!-- ВКЛАДКА 2: АКТИВНОСТИ И ОБУЧЕНИЕ (С подвкладками) -->
+  <!-- ВКЛАДКА 2: АКТИВНОСТИ И ОБУЧЕНИЕ -->
   <div id="tab-activities" class="tab-content">
     <div class="sub-nav">
-      <button class="sub-tab-btn active" onclick="setActivityCategory('all', this)">Все</button>
+      <button class="sub-tab-btn active" onclick="setActivityCategory('all', this)">🌟 Все</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('childhood', this)">👶 Детство</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('magic', this)">🔮 Магия</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('combat', this)">⚔️ Бой</button>
@@ -189,8 +179,8 @@
         <div class="slot-val" id="slot-weapon">Кулаки</div>
       </div>
       <div class="equip-slot" onclick="unequipSlot('armor')">
-        <div class="slot-label">Броня / Одеяние</div>
-        <div class="slot-val" id="slot-armor">Льняная рубаха</div>
+        <div class="slot-label">Броня</div>
+        <div class="slot-val" id="slot-armor">Одежда</div>
       </div>
       <div class="equip-slot" onclick="unequipSlot('accessory')">
         <div class="slot-label">Реликвия</div>
@@ -205,26 +195,42 @@
     <div id="shop-list"></div>
   </div>
 
-  <!-- ВКЛАДКА 4: ГИЛЬДИЯ И СИЛЫ МИРА -->
+  <!-- ВКЛАДКА 4: ГИЛЬДИЯ И ЛАБИРИНТЫ -->
   <div id="tab-guild" class="tab-content">
-    <div class="section-title">Монумент Семи Великих Сил Мира 🏆</div>
-    <div class="powers-monument" id="powers-monument-list"></div>
+    <div class="card" style="margin-bottom:12px; background:#181b26;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+          <b style="font-size:14px; color:#fff;">Доска Гильдии Авантюристов</b>
+          <div style="font-size:11px; color:var(--muted);">Репутация: <span id="guild-exp-text">0/30 GP</span></div>
+        </div>
+        <span class="tag badge-legendary" id="guild-status-tag">Ранг: F</span>
+      </div>
+    </div>
 
-    <div class="section-title" style="margin-top: 16px;">Доска Заказов Гильдии Авантюристов</div>
+    <!-- Раздел Лабиринтов -->
+    <div class="section-title">🏛️ Исследование Лабиринтов и Подземелий</div>
+    <div id="dungeon-container"></div>
+
+    <!-- Годовые контракты -->
+    <div class="section-title" style="margin-top: 16px;">📜 Годовые Заказы Гильдии (Обновляются каждый год)</div>
     <div id="guild-quests-list"></div>
+
+    <!-- Монумент Семи Сил -->
+    <div class="section-title" style="margin-top: 16px;">🏆 Монумент Семи Великих Сил Мира</div>
+    <div class="powers-monument" id="powers-monument-list"></div>
   </div>
 
-  <!-- ВКЛАДКА 5: МИР, ПУТЕШЕСТВИЯ И СВЯЗИ -->
+  <!-- ВКЛАДКА 5: СВЯЗИ И МИР -->
   <div id="tab-relations" class="tab-content">
-    <div class="section-title">🌍 Путешествия по Шестиликому Миру (Занимает 1 год)</div>
+    <div class="section-title">👥 Близкие, Семья и Знакомые (Нажмите для действий)</div>
+    <button class="btn-find" onclick="meetStranger()">🔍 Искать новые знакомства в городе</button>
+    <div id="relations-list"></div>
+
+    <div class="section-title" style="margin-top: 18px;">🌍 Путешествия по Шестиликому Миру (Занимает 1 год)</div>
     <div id="world-travel-list"></div>
 
-    <div class="section-title" style="margin-top: 16px;">Академии и Университеты</div>
+    <div class="section-title" style="margin-top: 16px;">🏛️ Академии и Университеты</div>
     <div id="schools-list"></div>
-
-    <div class="section-title" style="margin-top: 16px;">Близкие и Знакомые</div>
-    <button class="btn-find" onclick="meetStranger()">🔍 Искать новые знакомства</button>
-    <div id="relations-list"></div>
   </div>
 
   <!-- Нижняя панель навигации -->
@@ -246,8 +252,8 @@
       <span>Гильдия</span>
     </button>
     <button class="nav-item" onclick="switchTab('relations')">
-      <span class="icon">🌍</span>
-      <span>Мир</span>
+      <span class="icon">👥</span>
+      <span>Связи</span>
     </button>
   </div>
 
