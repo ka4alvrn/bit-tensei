@@ -125,7 +125,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .action-love { background: rgba(244, 114, 182, 0.15) !important; border-color: rgba(244, 114, 182, 0.4) !important; color: #f472b6 !important; }
 .action-married { background: rgba(251, 191, 36, 0.2) !important; border-color: var(--gold) !important; color: var(--gold) !important; }
 
-/* Взаимодействия прямо под персонажем */
+/* Взаимодействия прямо под карточкой персонажа */
 .npc-inline-actions {
   background: #141722; border-top: 1px solid var(--card-border);
   padding: 10px; margin-top: 8px; border-radius: 0 0 10px 10px;
@@ -159,11 +159,11 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .power-player { background: rgba(157, 78, 221, 0.15); border-radius: 6px; }
 
 .section-title { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; margin: 14px 0 6px; }
-.activity-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card {
+.activity-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card, .estate-card {
   background: var(--card); border-radius: 12px; padding: 12px;
   border: 1px solid var(--card-border); margin-bottom: 8px;
 }
-.quest-card, .shop-item, .travel-card { display: flex; justify-content: space-between; align-items: center; }
+.quest-card, .shop-item, .travel-card, .estate-card { display: flex; justify-content: space-between; align-items: center; }
 
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
