@@ -4,6 +4,53 @@ if (tg) { tg.ready(); tg.expand(); }
 let player = null;
 let dynastyGeneration = 1;
 
+// ==================== СИСТЕМА СОХРАНЕНИЯ ====================
+
+function saveGame() {
+  if (!player) return;
+  const saveData = {
+    player: player,
+    dynastyGeneration: dynastyGeneration,
+    logsHtml: document.getElementById("logs").innerHTML
+  };
+  localStorage.setItem("bit_tensei_save", JSON.stringify(saveData));
+}
+
+function loadGame() {
+  const raw = localStorage.getItem("bit_tensei_save");
+  if (!raw) return false;
+
+  try {
+    const data = JSON.parse(raw);
+    if (data && data.player) {
+      player = data.player;
+      dynastyGeneration = data.dynastyGeneration || 1;
+      
+      // Скрываем окно создания
+      document.getElementById("creation-overlay").style.display = "none";
+      
+      // Восстанавливаем историю событий
+      if (data.logsHtml) {
+        document.getElementById("logs").innerHTML = data.logsHtml;
+      }
+      
+      renderUI();
+      return true;
+    }
+  } catch (e) {
+    console.error("Ошибка загрузки сохранения:", e);
+  }
+  return false;
+}
+
+function clearSaveAndRestart() {
+  localStorage.removeItem("bit_tensei_save");
+  dynastyGeneration++;
+  showCreation();
+}
+
+// ==================== СОЗДАНИЕ ПЕРСОНАЖА ====================
+
 function showCreation() {
   populateRegionSelect();
   document.getElementById("creation-overlay").style.display = "flex";
@@ -81,8 +128,12 @@ function initCharacter(name, regionKey, origin, trait) {
   log(`🌍 Вы родились: <b>${player.region}</b>`);
   log(origin.log);
   log(`✨ Врожденный дар: <b class="tag badge-${trait.rarity}">${trait.name}</b> (${trait.desc})`);
-  updateUI();
+  
+  renderUI();
+  saveGame();
 }
+
+// ==================== ИГРОВАЯ ЛОГИКА ====================
 
 function log(msg) {
   const box = document.getElementById("logs");
@@ -94,7 +145,7 @@ function log(msg) {
   tg?.HapticFeedback?.impactOccurred('light');
 }
 
-function updateUI() {
+function renderUI() {
   if (!player) return;
   document.getElementById("char-name").innerText = player.name;
   document.getElementById("char-gen").innerText = `Поколение ${player.generation}`;
@@ -111,6 +162,11 @@ function updateUI() {
   document.getElementById("sword").innerText = player.sword;
   document.getElementById("intellect").innerText = player.intellect;
   document.getElementById("coins").innerText = player.coins;
+}
+
+function updateUI() {
+  renderUI();
+  saveGame(); // Автосохранение при любом изменении!
 }
 
 function trainMana() {
@@ -178,4 +234,7 @@ function ageUp() {
   updateUI();
 }
 
-showCreation();
+// Пробуем загрузить сохранение, если его нет — открываем создание
+if (!loadGame()) {
+  showCreation();
+}
