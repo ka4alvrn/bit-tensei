@@ -5,69 +5,48 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
   <title>Bit Tensei</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  <style>
-    :root {
-      --bg: #0f1015;
-      --card: #181a22;
-      --card-border: rgba(255, 255, 255, 0.08);
-      --accent: #9d4edd;
-      --text: #f3f4f6;
-      --muted: #9ca3af;
-      --mana: #38bdf8;
-      --hp: #ef4444;
-    }
-    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-    body {
-      margin: 0; padding: 14px; background: var(--bg); color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      user-select: none;
-    }
-    .card {
-      background: var(--card); border-radius: 16px; padding: 14px;
-      border: 1px solid var(--card-border); margin-bottom: 12px;
-    }
-    .header { display: flex; justify-content: space-between; align-items: center; }
-    .name { font-size: 18px; font-weight: 700; }
-    .badge {
-      font-size: 11px; background: rgba(157, 78, 221, 0.2); color: #c084fc;
-      padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block;
-    }
-    .age-badge { font-weight: 700; color: var(--accent); }
-    .bar-bg { height: 7px; background: #272a37; border-radius: 4px; overflow: hidden; margin-top: 4px; }
-    .bar-mana { height: 100%; background: var(--mana); transition: width 0.3s; }
-    .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
-    .stat { background: #1f222c; padding: 6px 10px; border-radius: 8px; }
-    
-    .log-box {
-      background: var(--card); border-radius: 14px; padding: 12px; height: 190px;
-      overflow-y: auto; font-size: 13px; line-height: 1.45; border: 1px solid var(--card-border);
-      margin-bottom: 12px;
-    }
-    .log-entry { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-    .log-year { color: var(--accent); font-weight: 700; }
-
-    .grid-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
-    button {
-      background: #222531; color: #fff; border: 1px solid var(--card-border);
-      padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
-    }
-    button:active { transform: scale(0.97); background: #2c303f; }
-    .btn-age {
-      width: 100%; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
-      padding: 16px; font-size: 16px; border: none; font-weight: 700;
-      box-shadow: 0 4px 15px rgba(157, 78, 221, 0.35); border-radius: 14px;
-    }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
+  <!-- Окно создания персонажа -->
+  <div id="creation-overlay">
+    <div class="modal-title">🔮 Колесо Сансары</div>
+    <div class="modal-sub">Перерождение в мире меча и магии</div>
+
+    <div class="input-group">
+      <label>Имя персонажа</label>
+      <input type="text" id="input-name" value="Рудеус" placeholder="Введите имя...">
+    </div>
+
+    <div class="input-group">
+      <label>Регион рождения</label>
+      <select id="select-region" onchange="updateFamilySelect()"></select>
+    </div>
+
+    <div class="input-group">
+      <label>Сословие / Семья</label>
+      <select id="select-family"></select>
+    </div>
+
+    <button class="btn-main" onclick="confirmCreation()">✨ Воплотиться в новом теле</button>
+    <button style="background: #252a38; border: none; padding: 12px; border-radius: 10px; color:#fff;" onclick="randomCreation()">
+      🎲 Полный рандом богов
+    </button>
+  </div>
+
+  <!-- Главный экран -->
   <div class="card">
     <div class="header">
       <div>
-        <div class="name">Рудеус Грейрат</div>
-        <div class="badge">Фактор Лапласа ✨</div>
+        <div class="name" id="char-name">Имя</div>
+        <div class="region-badge" id="char-region">Регион</div>
+        <div id="char-trait" class="tag">Талант</div>
       </div>
-      <div class="age-badge" id="age">0 лет</div>
+      <div style="text-align: right;">
+        <div style="font-weight: 700; color: var(--accent);" id="age">0 лет</div>
+        <div class="gen-badge" id="char-gen">Поколение 1</div>
+      </div>
     </div>
 
     <div style="margin-top: 10px; font-size: 12px; display:flex; justify-content:space-between;">
@@ -76,119 +55,27 @@
     <div class="bar-bg"><div class="bar-mana" id="mana-bar" style="width: 100%;"></div></div>
 
     <div class="stats">
-      <div class="stat">🧙 Ранг: <b id="magic">Новичок</b></div>
+      <div class="stat">🧙 Ранг магии: <b id="magic">Новичок</b></div>
       <div class="stat">⚔️ Меч: <b id="sword">Нет</b></div>
       <div class="stat">📚 Знания: <b id="intellect">10</b></div>
-      <div class="stat">🪙 Монеты: <b id="coins">0</b></div>
+      <div class="stat">🪙 Деньги: <b id="coins">0</b></div>
     </div>
   </div>
 
-  <div class="log-box" id="logs">
-    <div class="log-entry"><span class="log-year">[0 лет]</span> Вы переродились в мире меча и магии в теле младенца.</div>
-  </div>
+  <div class="log-box" id="logs"></div>
 
   <div class="grid-btns">
-    <button onclick="trainMana()">✨ Тренировать ману</button>
-    <button onclick="trainSword()">🗡️ Стиль Меча</button>
-    <button onclick="readBook()">📚 Читать книги</button>
-    <button onclick="explore()">🌲 Исследовать</button>
+    <button onclick="trainMana()">✨ Мана</button>
+    <button onclick="trainSword()">🗡️ Меч</button>
+    <button onclick="readBook()">📚 Книги</button>
+    <button onclick="explore()">🌲 Разведка</button>
   </div>
 
-  <button class="btn-age" onclick="ageUp()">⏳ Прожить 1 год</button>
+  <button class="btn-main" onclick="ageUp()">⏳ Прожить 1 год</button>
+  <button class="btn-secondary" onclick="showCreation()">🔄 Начать новую жизнь (Реинкарнация)</button>
 
-  <script>
-    const tg = window.Telegram?.WebApp;
-    if (tg) { tg.ready(); tg.expand(); }
-
-    let p = {
-      age: 0, mana: 30, maxMana: 30,
-      magic: "Новичок", magicExp: 0,
-      sword: "Нет", swordExp: 0,
-      intellect: 10, coins: 0
-    };
-
-    function log(msg) {
-      const box = document.getElementById("logs");
-      const el = document.createElement("div");
-      el.className = "log-entry";
-      el.innerHTML = `<span class="log-year">[${p.age} лет]</span> ${msg}`;
-      box.appendChild(el);
-      box.scrollTop = box.scrollHeight;
-      tg?.HapticFeedback?.impactOccurred('light');
-    }
-
-    function update() {
-      document.getElementById("age").innerText = `${p.age} лет`;
-      document.getElementById("mana-text").innerText = `${p.mana}/${p.maxMana}`;
-      document.getElementById("mana-bar").style.width = Math.min(100, (p.mana / p.maxMana) * 100) + "%";
-      document.getElementById("magic").innerText = p.magic;
-      document.getElementById("sword").innerText = p.sword;
-      document.getElementById("intellect").innerText = p.intellect;
-      document.getElementById("coins").innerText = p.coins;
-    }
-
-    function trainMana() {
-      p.maxMana += 6; p.mana = p.maxMana; p.magicExp += 15;
-      if (p.magicExp >= 50 && p.magic === "Новичок") {
-        p.magic = "Рядовой 🥉";
-        log("🎉 Вы освоили беззвучный каст магии воды! Ранг повышен до <b>Рядового</b>!");
-      } else if (p.magicExp >= 140 && p.magic === "Рядовой 🥉") {
-        p.magic = "Святой 🌟";
-        log("⚡ В юном возрасте вы вызвали грозовую бурю! Вы теперь <b>Маг Святого Класса</b>!");
-      } else {
-        log("Вы втайне практиковали тихий каст заклинаний. Запас маны увеличен!");
-      }
-      update();
-    }
-
-    function trainSword() {
-      p.swordExp += 15;
-      if (p.swordExp >= 45 && p.sword === "Нет") {
-        p.sword = "Бог Меча (Ученик)";
-        log("Отец Пол обучил вас основам Стиля Бога Меча 🗡️");
-      } else {
-        log("Спарринг на деревянных мечах закалил ваши мышцы.");
-      }
-      update();
-    }
-
-    function readBook() {
-      p.intellect += 4;
-      log("Вы изучили географию и языки других рас (+4 к знаниям).");
-      update();
-    }
-
-    function explore() {
-      if (Math.random() > 0.5) {
-        p.coins += 10;
-        log("Вы нашли несколько медных монет на окраине деревни (+10 монет).");
-      } else {
-        log("Вы гуляли по полям деревни Буэна, наблюдая за природой.");
-      }
-      update();
-    }
-
-    function ageUp() {
-      p.age++;
-      p.maxMana += Math.floor(p.maxMana * 0.12);
-      p.mana = p.maxMana;
-
-      if (p.age === 3) log("Вы случайно пробили каменную стену дома водяным шаром. Родители в шоке!");
-      else if (p.age === 5) log("В дом прибыла наставница магии — девушка-демон Рокси Мигурдия!");
-      else if (p.age === 7) log("Рокси дарит вам волшебный посох и признает ваше мастерство!");
-      else if (p.age === 10) log("⚠️ В небе над провинцией Фиtoa возникла черная брешь телепортации...");
-      else {
-        const events = [
-          "Спокойный год тренировок и изучения заклинаний.",
-          "Вы помогли Зенит по дому, используя слабую магию воды.",
-          "Отец был горд вашими успехами в фехтовании."
-        ];
-        log(events[Math.floor(Math.random() * events.length)]);
-      }
-      update();
-    }
-
-    update();
-  </script>
+  <!-- Подключаем базу данных и логику -->
+  <script src="data.js"></script>
+  <script src="game.js"></script>
 </body>
 </html>
