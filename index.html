@@ -5,11 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="color-scheme" content="dark">
   <title>Bit Tensei</title>
-  
-  <!-- Telegram Web App SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
-  
-  <!-- Стили -->
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
@@ -38,6 +34,23 @@
     <button class="btn-random" onclick="randomCreation()">🎲 Полный рандом богов</button>
   </div>
 
+  <!-- Экран Смерти и Наследования -->
+  <div id="death-overlay" style="display: none;">
+    <div class="modal-title" style="color: #ef4444;">💀 Конец Жизненного Пути</div>
+    <div class="modal-sub" id="death-reason">Вы прожили долгую жизнь...</div>
+    
+    <div class="death-summary" id="death-summary"></div>
+    
+    <div id="heir-selection-block">
+      <div class="section-title" style="text-align: center; margin-top: 15px;">Выберите наследника рода:</div>
+      <div id="heirs-list"></div>
+    </div>
+
+    <button class="btn-main" id="btn-reincarnate" style="margin-top: 15px;" onclick="startNewDynasty()">
+      🔄 Переродиться новой душой (Поколение 1)
+    </button>
+  </div>
+
   <!-- Модальное окно действий с NPC -->
   <div id="npc-modal" onclick="closeNPCModal()">
     <div class="npc-sheet" onclick="event.stopPropagation()">
@@ -53,7 +66,7 @@
     </div>
   </div>
 
-  <!-- Карточка персонажа -->
+  <!-- Главная карточка персонажа -->
   <div class="card">
     <div class="header">
       <div>
@@ -62,29 +75,42 @@
         <div id="char-trait" class="tag">Талант</div>
       </div>
       <div style="text-align: right;">
+        <div class="year-text" id="world-year">407 г. К.Д.</div>
         <div class="age-text" id="age">0 лет</div>
         <div class="gen-badge" id="char-gen">Поколение 1</div>
       </div>
     </div>
 
-    <div class="mana-meta">
-      <span>Мана</span><span id="mana-text">30/30</span>
+    <!-- Полоска здоровья (HP) -->
+    <div class="bar-meta">
+      <span>❤️ Здоровье</span><span id="hp-text">100/100</span>
+    </div>
+    <div class="bar-bg"><div class="bar-fill bar-hp" id="hp-bar" style="width: 100%;"></div></div>
+
+    <!-- Полоска маны -->
+    <div class="bar-meta" style="margin-top: 6px;">
+      <span>🔮 Запас Маны <small id="mana-status" style="color:var(--muted); font-size:10px;"></small></span>
+      <span id="mana-text">30/30</span>
     </div>
     <div class="bar-bg"><div class="bar-fill bar-mana" id="mana-bar" style="width: 100%;"></div></div>
 
     <div class="stats">
       <div class="stat">🧙 Магия: <b id="magic">Новичок</b></div>
-      <div class="stat">⚔️ Меч: <b id="sword">Нет</b></div>
+      <div class="stat">🪙 Золото: <b id="coins">0</b></div>
+      <div class="stat">⚔️ Бог Меча: <b id="sword-god">Нет</b></div>
+      <div class="stat">💧 Бог Воды: <b id="water-god">Нет</b></div>
+      <div class="stat">🌪️ Бог Севера: <b id="north-god">Нет</b></div>
       <div class="stat">📚 Знания: <b id="intellect">10</b></div>
-      <div class="stat">🪙 Монеты: <b id="coins">0</b></div>
     </div>
+    
+    <div id="school-badge-container" style="margin-top: 8px;"></div>
   </div>
 
   <!-- ВКЛАДКА 1: ПЕРСОНАЖ / ЖИЗНЬ -->
   <div id="tab-character" class="tab-content active">
     <div class="log-box" id="logs"></div>
     <button class="btn-main" onclick="ageUp()">⏳ Прожить 1 год</button>
-    <button class="btn-secondary" onclick="clearSaveAndRestart()">🔄 Начать новую жизнь (Реинкарнация)</button>
+    <button class="btn-secondary" onclick="confirmReset()">🔄 Сдаться и начать заново</button>
   </div>
 
   <!-- ВКЛАДКА 2: ОТНОШЕНИЯ -->
@@ -97,58 +123,35 @@
 
   <!-- ВКЛАДКА 3: АКТИВНОСТИ -->
   <div id="tab-activities" class="tab-content">
-    <div class="section-title">Магия и Боевые Искусства</div>
-    <div class="activity-card">
-      <div class="act-info">
-        <span class="act-name">✨ Медитация и каст</span>
-        <span class="act-desc">Увеличить запас маны и магический ранг</span>
-      </div>
-      <button class="act-btn" onclick="trainMana()">Заниматься</button>
-    </div>
-    <div class="activity-card">
-      <div class="act-info">
-        <span class="act-name">🗡️ Спарринг на мечах</span>
-        <span class="act-desc">Отработка стоек и стиля Бога Меча</span>
-      </div>
-      <button class="act-btn" onclick="trainSword()">Заниматься</button>
-    </div>
+    <div id="activities-container"></div>
+  </div>
 
-    <div class="section-title">Развитие и Знания</div>
-    <div class="activity-card">
-      <div class="act-info">
-        <span class="act-name">📚 Чтение свитков</span>
-        <span class="act-desc">Изучение языков, трав и географии (+Знания)</span>
-      </div>
-      <button class="act-btn" onclick="readBook()">Читать</button>
-    </div>
-
-    <div class="section-title">Окружающий Мир</div>
-    <div class="activity-card">
-      <div class="act-info">
-        <span class="act-name">🌲 Разведка местности</span>
-        <span class="act-desc">Шанс найти травы, монеты или тайны</span>
-      </div>
-      <button class="act-btn" onclick="explore()">Исследовать</button>
-    </div>
+  <!-- ВКЛАДКА 4: АКАДЕМИИ И ШКОЛЫ -->
+  <div id="tab-schools" class="tab-content">
+    <div class="section-title">Великие Институты и Додзё Мира</div>
+    <div id="schools-list"></div>
   </div>
 
   <!-- Нижняя панель навигации -->
   <div class="bottom-nav">
     <button class="nav-item active" onclick="switchTab('character')">
       <span class="icon">👤</span>
-      <span>Персонаж</span>
-    </button>
-    <button class="nav-item" onclick="switchTab('relations')">
-      <span class="icon">👥</span>
-      <span>Отношения</span>
+      <span>Жизнь</span>
     </button>
     <button class="nav-item" onclick="switchTab('activities')">
       <span class="icon">⚡</span>
-      <span>Активности</span>
+      <span>Дела</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('schools')">
+      <span class="icon">🏛️</span>
+      <span>Школы</span>
+    </button>
+    <button class="nav-item" onclick="switchTab('relations')">
+      <span class="icon">👥</span>
+      <span>Связи</span>
     </button>
   </div>
 
-  <!-- Скрипты (Сначала данные, затем логика) -->
   <script src="./data.js"></script>
   <script src="./app.js"></script>
 </body>
