@@ -3,8 +3,9 @@ if (tg) { tg.ready(); tg.expand(); }
 
 let player = null;
 let dynastyGeneration = 1;
+let currentSelectedNPC = null;
 
-// ==================== ПЕРЕКЛЮЧЕНИЕ ВКЛАДОК ====================
+// ==================== НАВИГАЦИЯ ====================
 
 function switchTab(tabId) {
   document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
@@ -16,11 +17,10 @@ function switchTab(tabId) {
   document.querySelectorAll('.nav-item')[navIndex].classList.add('active');
 
   if (tabId === 'relations') renderRelations();
-
   tg?.HapticFeedback?.selectionChanged();
 }
 
-// ==================== СИСТЕМА СОХРАНЕНИЯ ====================
+// ==================== СОХРАНЕНИЯ ====================
 
 function saveGame() {
   if (!player) return;
@@ -41,10 +41,8 @@ function loadGame() {
     if (data && data.player) {
       player = data.player;
       dynastyGeneration = data.dynastyGeneration || 1;
-      
       document.getElementById("creation-overlay").style.display = "none";
       if (data.logsHtml) document.getElementById("logs").innerHTML = data.logsHtml;
-      
       renderUI();
       return true;
     }
@@ -103,7 +101,7 @@ function confirmCreation() {
 }
 
 function randomCreation() {
-  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша", "Люк", "Бадигади"];
+  const names = ["Рудеус", "Сильфи", "Клифф", "Эрис", "Пол", "Зенит", "Гилен", "Руджерд", "Норн", "Айша"];
   const randName = names[Math.floor(Math.random() * names.length)];
   const regKeys = Object.keys(REGIONS);
   const randRegKey = regKeys[Math.floor(Math.random() * regKeys.length)];
@@ -113,30 +111,6 @@ function randomCreation() {
 
   initCharacter(randName, randRegKey, randOrigin, trait);
   document.getElementById("creation-overlay").style.display = "none";
-}
-
-function generateInitialFamily(regionKey, origin) {
-  let fatherName = "Пол";
-  let motherName = "Зенит";
-  let fatherRole = "Отец • Мечник";
-  let motherRole = "Мать • Целительница";
-
-  if (regionKey === "asura" && origin.id.includes("boreas")) {
-    fatherName = "Филипп Бореас Грейрат";
-    motherName = "Хильда";
-    fatherRole = "Отец • Мэр города Роа";
-    motherRole = "Мать • Знатная дама";
-  } else if (regionKey === "demon") {
-    fatherName = "Рокко Мигурд";
-    motherName = "Рокалия";
-    fatherRole = "Отец • Старейшина деревни";
-    motherRole = "Мать • Травница";
-  }
-
-  return [
-    { id: "father", name: fatherName, role: fatherRole, relation: 80 },
-    { id: "mother", name: motherName, role: motherRole, relation: 95 }
-  ];
 }
 
 function initCharacter(name, regionKey, origin, trait) {
@@ -158,7 +132,12 @@ function initCharacter(name, regionKey, origin, trait) {
     swordExp: (origin.sword || 0) + (trait.sword || 0),
     intellect: 10 + (origin.int || 0) + (trait.int || 0),
     coins: origin.coins || 0,
-    relations: generateInitialFamily(regionKey, origin)
+    relations: [
+      { id: "father", name: "Отец", gender: "male", role: "Глава семьи", relation: 80, status: "Семья", isFamily: true },
+      { id: "mother", name: "Мать", gender: "female", role: "Хранительница очага", relation: 95, status: "Семья", isFamily: true }
+    ],
+    spouse: null,
+    children: []
   };
 
   document.getElementById("logs").innerHTML = "";
@@ -170,65 +149,201 @@ function initCharacter(name, regionKey, origin, trait) {
   saveGame();
 }
 
-// ==================== ОТНОШЕНИЯ (NPC) ====================
+// ==================== СОЦИАЛЬНАЯ СИСТЕМА (NPC) ====================
 
 function renderRelations() {
   const container = document.getElementById("relations-list");
   container.innerHTML = "";
-
   if (!player || !player.relations) return;
 
   player.relations.forEach(npc => {
+    let statusClass = "status-friend";
+    if (npc.relation < 30) statusClass = "status-enemy";
+    else if (npc.status === "Супруг/Супруга") statusClass = "status-married";
+    else if (npc.status === "Пара") statusClass = "status-love";
+
     const card = document.createElement("div");
     card.className = "relation-card";
+    card.onclick = () => openNPCModal(npc);
     card.innerHTML = `
       <div class="rel-header">
         <div>
-          <div class="rel-name">${npc.name}</div>
-          <div class="rel-role">${npc.role}</div>
+          <div class="rel-name">
+            ${npc.name}
+            ${npc.isCanon ? '<span class="badge-canon">Канон ⭐</span>' : ''}
+            ${npc.isChild ? '<span style="color:#fbbf24; font-size:11px;">(Наследник 👶)</span>' : ''}
+          </div>
+          <div class="rel-role">${npc.role || npc.race} • <span class="${statusClass}">${npc.status}</span></div>
         </div>
-        <div style="font-size:12px; font-weight:700; color:var(--green);">${npc.relation}%</div>
+        <div style="font-size:13px; font-weight:700;">${npc.relation}%</div>
       </div>
       <div class="bar-bg">
-        <div class="bar-fill bar-relation" style="width: ${npc.relation}%;"></div>
-      </div>
-      <div class="rel-actions">
-        <button class="rel-btn" onclick="talkNPC('${npc.id}')">💬 Поговорить</button>
-        <button class="rel-btn" onclick="trainWithNPC('${npc.id}')">⚔️ Учиться</button>
+        <div class="bar-fill bar-relation" style="width: ${Math.max(0, Math.min(100, npc.relation))}%; background: ${npc.relation < 30 ? 'var(--hp)' : 'var(--green)'};"></div>
       </div>
     `;
     container.appendChild(card);
   });
 }
 
-function talkNPC(id) {
-  const npc = player.relations.find(n => n.id === id);
-  if (!npc) return;
+function openNPCModal(npc) {
+  currentSelectedNPC = npc;
+  document.getElementById("modal-npc-name").innerText = npc.name;
+  document.getElementById("modal-npc-sub").innerText = `${npc.gender === 'male' ? 'Мужчина' : 'Женщина'} • ${npc.role || npc.race}`;
+  document.getElementById("modal-npc-status").innerText = npc.status;
+  document.getElementById("modal-npc-rel").innerText = `${npc.relation}%`;
 
-  npc.relation = Math.min(100, npc.relation + 5);
-  log(`Вы тепло пообщались с ${npc.name}. Отношения улучшились (+5%)!`);
-  renderRelations();
-  updateUI();
-  switchTab('character');
-}
+  const btnContainer = document.getElementById("modal-npc-buttons");
+  btnContainer.innerHTML = "";
 
-function trainWithNPC(id) {
-  const npc = player.relations.find(n => n.id === id);
-  if (!npc) return;
+  // Базовые действия
+  btnContainer.innerHTML += `<button onclick="actionTalk()">💬 Поговорить</button>`;
+  btnContainer.innerHTML += `<button onclick="actionGift()">🎁 Сделать подарок (10🪙)</button>`;
+  btnContainer.innerHTML += `<button class="action-danger" onclick="actionInsult()">⚔️ Оскорбить / Дуэль</button>`;
 
-  if (player.age < 3) {
-    log(`${npc.name} с улыбкой говорит, что вы еще слишком малы для суровых тренировок.`);
-  } else {
-    npc.relation = Math.min(100, npc.relation + 3);
-    player.swordExp += 10;
-    log(`${npc.name} преподал вам урок дисциплины и стоек! (+Опыт меча)`);
+  // Романтическая ветка (для тех, кто не является кровной семьей)
+  if (!npc.isFamily && !npc.isChild) {
+    if (player.age >= 14 && npc.status !== "Пара" && npc.status !== "Супруг/Супруга") {
+      btnContainer.innerHTML += `<button class="action-love" onclick="actionConfess()">❤️ Флиртовать / Признаться</button>`;
+    }
+    if (player.age >= 16 && npc.status === "Пара" && !player.spouse) {
+      btnContainer.innerHTML += `<button class="action-married" onclick="actionMarry()">💍 Сделать предложение (Брак)</button>`;
+    }
   }
+
+  // Рождение ребенка для супругов
+  if (npc.status === "Супруг/Супруга" && player.age >= 16) {
+    btnContainer.innerHTML += `<button class="action-married" onclick="actionHaveChild()">👶 Зачать ребенка (Наследника)</button>`;
+  }
+
+  document.getElementById("npc-modal").style.display = "flex";
+}
+
+function closeNPCModal() {
+  document.getElementById("npc-modal").style.display = "none";
+  currentSelectedNPC = null;
+}
+
+// Поиск нового знакомого
+function meetStranger() {
+  const newNpc = generateRandomNPC(player.regionKey);
+  player.relations.push(newNpc);
+  log(`На улицах вы повстречали незнакомца: <b>${newNpc.name}</b> (${newNpc.role}).`);
   renderRelations();
+  updateUI();
+}
+
+// Действия диалога
+function actionTalk() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  if (npc.relation < 25) {
+    log(`${npc.name} с презрением отворачивается от вас: "Убирайся с глаз моих!"`);
+  } else {
+    npc.relation = Math.min(100, npc.relation + 6);
+    if (npc.relation >= 60 && npc.status === "Знакомый") npc.status = "Друг";
+    log(`Вы душевно побеседовали с <b>${npc.name}</b> (+6% к отношениям).`);
+  }
+  closeNPCModal();
   updateUI();
   switchTab('character');
 }
 
-// ==================== ИГРОВАЯ ЛОГИКА ====================
+function actionGift() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  if (player.coins < 10) {
+    alert("У вас недостаточно монет для достойного подарка (нужно 10🪙)!");
+    return;
+  }
+  player.coins -= 10;
+  npc.relation = Math.min(100, npc.relation + 15);
+  if (npc.relation >= 30 && npc.status === "Заклятый враг") npc.status = "Знакомый";
+  log(`Вы преподнесли ценный сувенир для <b>${npc.name}</b>. Глаза сияют от восторга (+15%)!`);
+  closeNPCModal();
+  updateUI();
+  switchTab('character');
+}
+
+function actionInsult() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  npc.relation = Math.max(0, npc.relation - 30);
+  if (npc.relation <= 25) npc.status = "Заклятый враг";
+
+  if (Math.random() > 0.5) {
+    player.swordExp += 10;
+    log(`Ссора с <b>${npc.name}</b> переросла в яростную дуэль на мечах! Вы отразили удар и получили боевой опыт.`);
+  } else {
+    log(`Вы жестоко унизили <b>${npc.name}</b>. Теперь между вами зародилась кровная вражда!`);
+  }
+  closeNPCModal();
+  updateUI();
+  switchTab('character');
+}
+
+function actionConfess() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  if (npc.relation >= 75) {
+    npc.status = "Пара";
+    log(`💖 <b>${npc.name}</b> смущенно опускает взгляд и отвечает взаимностью! Вы теперь пара!`);
+  } else {
+    npc.relation = Math.max(0, npc.relation - 10);
+    log(`💔 <b>${npc.name}</b> вежливо улыбается: "Ты замечательный человек, но давай останемся друзьями..."`);
+  }
+  closeNPCModal();
+  updateUI();
+  switchTab('character');
+}
+
+function actionMarry() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  if (npc.relation >= 90) {
+    npc.status = "Супруг/Супруга";
+    player.spouse = npc;
+    log(`💍 Колокола звонят в соборе! Вы и <b>${npc.name}</b> связали свои судьбы священными узами брака!`);
+  } else {
+    log(`${npc.name} считает, что вы слишком торопите события. Укрепите доверие!`);
+  }
+  closeNPCModal();
+  updateUI();
+  switchTab('character');
+}
+
+function actionHaveChild() {
+  const npc = currentSelectedNPC;
+  if (!npc) return;
+
+  const childGender = Math.random() > 0.5 ? "male" : "female";
+  const childNames = childGender === "male" ? ["Зик", "Арси", "Люсиен", "Лео"] : ["Люси", "Лара", "Крис", "Эмили"];
+  const childName = childNames[Math.floor(Math.random() * childNames.length)];
+
+  const child = {
+    id: "child_" + Date.now(),
+    name: `${childName} ${player.name.split(" ")[1] || ""}`,
+    gender: childGender,
+    role: "Новорожденный наследник",
+    relation: 100,
+    status: "Семья",
+    isFamily: true,
+    isChild: true
+  };
+
+  player.children.push(child);
+  player.relations.push(child);
+  log(`🎉 Невероятная радость! В семье родился первенец — <b>${child.name}</b>! Продолжатель вашего рода.`);
+  closeNPCModal();
+  updateUI();
+  switchTab('character');
+}
+
+// ==================== ИГРОВАЯ ЛОГИКА И СТАРЕНИЕ ====================
 
 function log(msg) {
   const box = document.getElementById("logs");
@@ -319,29 +434,31 @@ function ageUp() {
   player.maxMana += growth;
   player.mana = player.maxMana;
 
-  // Динамическое появление персонажей в жизни
-  if (player.age === 4) {
-    if (!player.relations.some(n => n.id === "sylphie")) {
-      player.relations.push({ id: "sylphie", name: "Сильфиетта", role: "Подруга детства • Эльфийка", relation: 70 });
-      log("🟢 Вы спасли застенчивую зеленоволосую девочку от хулиганов! Сильфиетта теперь ваш друг.");
+  // Случайная встреча с каноничным героем
+  CANON_NPCS.forEach(c => {
+    if (player.age === c.minAge && !player.relations.some(r => r.id === c.id)) {
+      if (Math.random() > 0.3) {
+        player.relations.push({
+          id: c.id,
+          name: c.name,
+          gender: c.gender,
+          race: c.race,
+          role: c.role,
+          relation: c.relation,
+          status: "Друг",
+          isCanon: true
+        });
+        log(`⭐ **Судьбоносная встреча!** В вашей жизни появляется легендарный герой: <b>${c.name}</b> (${c.role})!`);
+      }
     }
-  } else if (player.age === 5) {
-    if (!player.relations.some(n => n.id === "roxy")) {
-      player.relations.push({ id: "roxy", name: "Рокси Мигурдия", role: "Наставница • Маг Святого Ранга", relation: 65 });
-      log("🧙‍♂️ В дом прибыла репетитор по магии из расы демонов — Рокси Мигурдия!");
-    }
-  } else if (player.age === 7) {
-    log("Вам исполнилось 7 лет — пора делать первые шаги на пути воина или мага.");
-  } else if (player.age === 10) {
-    log("⚠️ В небесах раздался глухой гул... Плотность маны в атмосфере зашкаливает.");
-  } else {
-    const events = [
-      "Год упорных тренировок и познания таинств мира.",
-      "Вы помогали семье по хозяйству, укрепляя тело и выносливость.",
-      "Спокойный год за чтением книг в тишине."
-    ];
-    log(events[Math.floor(Math.random() * events.length)]);
-  }
+  });
+
+  const events = [
+    "Год упорных тренировок и постижения таинств мира.",
+    "Вы помогали местным жителям, укрепляя тело и дух.",
+    "Спокойный год за чтением книг в тишине."
+  ];
+  log(events[Math.floor(Math.random() * events.length)]);
 
   updateUI();
 }
