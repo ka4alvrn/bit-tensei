@@ -1,58 +1,244 @@
+const START_YEAR = 407; // 407 год Календаря Дракона (К.Д.) - рождение Рудеуса
+
+const SWORD_RANKS = ["Нет", "Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог ⚔️"];
+const MAGIC_RANKS = ["Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог 🔮"];
+
 const REGIONS = {
   asura: {
     name: "🏰 Королевство Асура (Сердце Мира)",
+    race: "Человек", maxAge: 75,
     origins: [
-      { id: "boreas", name: "Дом Бореас Грейрат (Лорды Роа)", coins: 300, mana: 15, int: 5, log: "Вы открыли глаза в неприступной крепости Роа ветви Бореас." },
-      { id: "notos", name: "Дом Нотос Грейрат (Южная знать)", coins: 250, mana: 20, int: 6, log: "Вы родились среди садов и мраморных залов юга Асуры." },
-      { id: "knight_buena", name: "Пограничные рыцари (Буэна)", coins: 35, mana: 10, sword: 10, int: 3, log: "Уютный дом на окраине деревни Буэна у пшеничных полей." },
-      { id: "peasant_asura", name: "Крестьяне провинции Фитоа", coins: 0, mana: 0, int: 0, log: "Глиняная изба и тяжелый полевой труд с восхода солнца." },
-      { id: "slums_ars", name: "Трущобы столицы Арс", coins: 2, mana: 5, sword: 5, int: 1, log: "Вы родились под мостом великой столицы Асуры." }
+      { id: "boreas", name: "Дом Бореас Грейрат (Лорды Роа)", coins: 350, mana: 15, int: 5, swordGod: 10, log: "Вы открыли глаза в неприступной крепости Роа ветви Бореас." },
+      { id: "notos", name: "Дом Нотос Грейрат (Южная знать)", coins: 300, mana: 25, int: 6, waterGod: 10, log: "Вы родились среди садов и мраморных залов юга Асуры." },
+      { id: "knight_buena", name: "Пограничные рыцари (Буэна)", coins: 50, mana: 10, swordGod: 15, int: 3, log: "Уютный дом на окраине деревни Буэна у пшеничных полей." },
+      { id: "peasant_asura", name: "Крестьяне провинции Фитоа", coins: 5, mana: 0, int: 0, log: "Глиняная изба и тяжелый полевой труд с восхода солнца." },
+      { id: "slums_ars", name: "Трущобы столицы Арс", coins: 2, mana: 5, northGod: 15, int: 2, log: "Вы родились под мостом великой столицы Асуры." }
     ]
   },
   ranoa: {
     name: "❄️ Магические Королевства Севера (Раноа)",
+    race: "Человек", maxAge: 78,
     origins: [
-      { id: "academy_prof", name: "Семья Профессора Академии Раноа", coins: 150, mana: 40, int: 15, log: "Вы родились в городе Шария среди магических фолиантов." },
-      { id: "magic_guild", name: "Союз Артефакторов", coins: 90, mana: 25, int: 8, log: "Мастерская полна кристаллов маны и магических свитков." },
-      { id: "winter_hunter", name: "Северные охотники", coins: 20, mana: 10, sword: 15, int: 2, log: "Ледяной ветер и вечная мерзлота закалили ваше тело." }
+      { id: "academy_prof", name: "Семья Профессора Академии Раноа", coins: 200, mana: 50, int: 15, log: "Вы родились в городе Шария среди магических фолиантов." },
+      { id: "magic_guild", name: "Союз Артефакторов", coins: 120, mana: 30, int: 8, log: "Мастерская полна кристаллов маны и свитков." },
+      { id: "winter_hunter", name: "Северные охотники", coins: 30, mana: 10, northGod: 20, int: 3, log: "Ледяной ветер и вечная мерзлота закалили ваше тело." }
     ]
   },
   demon: {
     name: "🌋 Демонический Континент (Пустоши Зла)",
+    race: "Демон", maxAge: 180,
     origins: [
-      { id: "migurd_village", name: "Деревня долгожителей Мигурд", coins: 10, mana: 40, int: 10, log: "Сапфировые волосы и врожденная способность к телепатии." },
-      { id: "speld_clan", name: "Отверженный клан Спардов", coins: 5, mana: 25, sword: 25, int: 1, log: "Изумрудные волосы и алый кристалл на лбу. Вы рождены воином." },
-      { id: "wind_port_pirate", name: "Контрабандисты Города Ветров", coins: 70, mana: 15, sword: 15, int: 6, log: "Шум портовых таверн и соленая вода океана." }
+      { id: "migurd_village", name: "Деревня долгожителей Мигурд", coins: 15, mana: 60, int: 10, log: "Сапфировые волосы и телепатия с сородичами." },
+      { id: "speld_clan", name: "Отверженный клан Спардов", coins: 5, mana: 20, swordGod: 30, int: 2, log: "Изумрудные волосы и алый камень во лбу. Вы воин от рождения." },
+      { id: "wind_port_pirate", name: "Контрабандисты Города Ветров", coins: 90, mana: 15, northGod: 25, int: 6, log: "Шум портовых таверн и соленая вода океана." }
     ]
   },
   great_forest: {
     name: "🌲 Великий Лес (Царство Зверолюдей)",
+    race: "Зверочеловек", maxAge: 90,
     origins: [
-      { id: "dorudia_chieftain", name: "Правящая ветвь клана Дорудиа", coins: 30, mana: 20, sword: 20, int: 5, log: "Вы родились с мягкими ушками и сильным хвостом в семье вождя." },
-      { id: "forest_scout", name: "Следопыты кроны деревьев", coins: 10, mana: 15, sword: 15, int: 4, log: "Вы научились прыгать по гигантским ветвям на высоте птичьего полета." }
+      { id: "dorudia_chieftain", name: "Правящая ветвь клана Дорудиа", coins: 40, mana: 25, swordGod: 25, int: 5, log: "Вы родились с мягкими ушками и сильным хвостом в семье вождя." },
+      { id: "forest_scout", name: "Следопыты крон деревьев", coins: 15, mana: 15, northGod: 20, int: 4, log: "Вы научились прыгать по гигантским ветвям на высоте птичьего полета." }
     ]
   },
   milis: {
     name: "⛪ Святая Земля Милис (Царство Чистоты)",
+    race: "Человек", maxAge: 75,
     origins: [
-      { id: "temple_knight", name: "Орден Рыцарей Храма", coins: 130, mana: 20, sword: 15, int: 5, log: "Белоснежный плащ с гербом Святого Милиса." },
-      { id: "milis_merchant", name: "Гильдия торговцев Великого Дерева", coins: 180, mana: 5, int: 8, log: "Дом у корней священного Белого Дерева столицы." }
+      { id: "temple_knight", name: "Орден Рыцарей Храма", coins: 160, mana: 25, waterGod: 25, int: 6, log: "Белоснежный плащ с гербом Святого Милиса." },
+      { id: "milis_merchant", name: "Гильдия торговцев Великого Дерева", coins: 220, mana: 5, int: 9, log: "Дом у корней священного Белого Дерева столицы." }
     ]
   }
 };
 
 const TRAITS = [
-  { id: "healthy", name: "Крепкое здоровье", rarity: "common", weight: 25, mana: 5, sword: 5, desc: "Быстро затягиваются ссадины и раны." },
-  { id: "curious", name: "Любознательность", rarity: "common", weight: 25, int: 5, desc: "Впитываете книги и чужие обычаи как губка." },
-  { id: "water_aff", name: "Сродство с Водой 💧", rarity: "rare", weight: 8, mana: 20, desc: "Природное чутье магии течения и пара." },
-  { id: "fire_aff", name: "Сродство с Огнем 🔥", rarity: "rare", weight: 8, mana: 20, desc: "Огненные чары требуют меньше сил." },
-  { id: "sword_instinct", name: "Инстинкт Мечника 🗡️", rarity: "rare", weight: 7, sword: 20, desc: "Молниеносная реакция первого выпада." },
-  { id: "silent_cast", name: "Беззвучный каст 🔮", rarity: "epic", weight: 6, mana: 40, desc: "Колдовство силой мысли без заклинаний вслух." },
-  { id: "beast_voice", name: "Голос Зверя 🐺", rarity: "epic", weight: 5, sword: 15, int: 5, desc: "Оглушающий утробный рев зверолюдей." },
-  { id: "migurd_blood", name: "Кровь долгожителя 🧬", rarity: "epic", weight: 3, mana: 35, int: 10, desc: "Жизнь в сотни лет, ясный ум до старости." },
-  { id: "isekai_memory", name: "Память Земли (Исекай) 🧠", rarity: "legendary", weight: 3, int: 25, mana: 30, desc: "Вы помните законы физики из прошлого мира!" },
-  { id: "demon_eye", name: "Глаз Предвидения 👁️", rarity: "legendary", weight: 2, sword: 25, mana: 25, desc: "Видите траектории атак врагов на секунду раньше." },
-  { id: "laplace_factor", name: "Истинный Фактор Лапласа ✨", rarity: "mythic", weight: 1, mana: 100, desc: "Колоссальный океан маны уровня Богов." }
+  { id: "healthy", name: "Крепкое здоровье", rarity: "common", weight: 25, hp: 20, desc: "Выносливость и долголетие." },
+  { id: "curious", name: "Любознательность", rarity: "common", weight: 25, int: 5, desc: "Знания усваиваются быстрее." },
+  { id: "water_aff", name: "Сродство с Водой 💧", rarity: "rare", weight: 8, mana: 25, waterGod: 15, desc: "Чутье течения и защитных стоек." },
+  { id: "fire_aff", name: "Сродство с Огнем 🔥", rarity: "rare", weight: 8, mana: 25, swordGod: 15, desc: "Взрывной темперамент первого выпада." },
+  { id: "silent_cast", name: "Беззвучный каст 🔮", rarity: "epic", weight: 6, mana: 50, desc: "Способность кастовать без заклинаний с детства." },
+  { id: "migurd_blood", name: "Кровь долгожителя 🧬", rarity: "epic", weight: 4, maxAgeBonus: 100, mana: 40, desc: "Жизнь в века и медленное старение." },
+  { id: "demon_eye", name: "Глаз Предвидения 👁️", rarity: "legendary", weight: 2, swordGod: 25, waterGod: 25, desc: "Видите следующий шаг врага." },
+  { id: "laplace_factor", name: "Фактор Лапласа ✨", rarity: "mythic", weight: 1, mana: 150, desc: "Океан маны. Манные каналы не затвердевают после 10 лет!" }
+];
+
+const CANON_NPCS = [
+  { id: "sylphie", name: "Сильфиетта", gender: "female", race: "Полуэльф", role: "Подруга детства • Маг без слов", relation: 70, isCanon: true, minAge: 4 },
+  { id: "roxy", name: "Рокси Мигурдия", gender: "female", race: "Мигурд", role: "Наставница • Маг Святого Ранга", relation: 65, isCanon: true, minAge: 5 },
+  { id: "eris", name: "Эрис Бореас Грейрат", gender: "female", race: "Человек", role: "Леди Бореас • Бешеная мечница", relation: 40, isCanon: true, minAge: 7 },
+  { id: "ghislaine", name: "Гилен Дедольдия", gender: "female", race: "Зверочеловек", role: "Мечница Ранга Царя Меча", relation: 50, isCanon: true, minAge: 7 },
+  { id: "ruijerd", name: "Руджерд Спардия", gender: "male", race: "Спард", role: "Тупик • Воин сотен битв", relation: 60, isCanon: true, minAge: 10 },
+  { id: "cliff", name: "Клифф Гриммор", gender: "male", race: "Человек", role: "Гениальный экзорцист Милиса", relation: 45, isCanon: true, minAge: 10 },
+  { id: "zanoba", name: "Заноба Широне", gender: "male", race: "Мико", role: "Благословенный принц чудовищной силы", relation: 55, isCanon: true, minAge: 11 }
+];
+
+// Школы и Университеты мира
+const SCHOOLS = [
+  {
+    id: "ranoa_academy",
+    name: "Магическая Академия Раноа 🎓",
+    region: "Город Шария (Раноа)",
+    minAge: 13,
+    cost: 300,
+    desc: "Главный центр магических искусств мира. Преподают маги святых и королевских классов.",
+    benefit: "Открывает углубленные лекции, дуэли магов и доступ к Запретной библиотеке."
+  },
+  {
+    id: "asura_academy",
+    name: "Королевская Академия Асуры 🏰",
+    region: "Столица Арс (Асура)",
+    minAge: 12,
+    cost: 450,
+    desc: "Элитное заведение для высшей знати и будущих рыцарей королевской гвардии.",
+    benefit: "Обучение этикету, Стилю Бога Воды и колоссальный прирост связей и престижа."
+  },
+  {
+    id: "sword_sanctuary",
+    name: "Святая Земля Меча (Додзё Гула) 🗡️",
+    region: "Святая Земля Меча",
+    minAge: 10,
+    cost: 150,
+    minSwordExp: 40,
+    desc: "Суровые снежные горы, где тренируются ученики Бога Меча до потери пульса.",
+    benefit: "Быстрый путь к постижению 'Светового клинка' и рангу Святого Меча."
+  },
+  {
+    id: "milis_seminary",
+    name: "Высшая Семинария Святого Милиса ⛪",
+    region: "Милисион (Святая Земля)",
+    minAge: 11,
+    cost: 200,
+    desc: "Изучение священных писаний, магии исцеления, детоксикации и барьеров.",
+    benefit: "Ученики получают защиту церкви и овладевают высшей магией лечения."
+  }
+];
+
+// База активностей с фильтрами по возрасту
+const ACTIVITIES = [
+  // Младенчество и ранее детство (0 - 6 лет)
+  {
+    id: "baby_crawl",
+    category: "childhood",
+    name: "👶 Ползать по поместью и изучать мир",
+    minAge: 1, maxAge: 3, cost: 0,
+    desc: "Развивает моторику и восприятие окружающих вещей.",
+    action: (p) => { p.intellect += 1; return "Вы исследовали углы комнат и научились уверенно стоять (+1 Интеллект)."; }
+  },
+  {
+    id: "toddler_mana_pulse",
+    category: "magic",
+    name: "🔮 Детская концентрация маны (Золотой Период)",
+    minAge: 2, maxAge: 9, cost: 0,
+    desc: "Манные каналы невероятно гибки! Ежедневное истощение расширяет сосуд души.",
+    action: (p) => {
+      let gain = (p.trait.id === "laplace_factor") ? 30 : (p.trait.id === "silent_cast" ? 22 : 14);
+      p.maxMana += gain; p.mana = p.maxMana; p.magicExp += 10;
+      return `Вы концентрировали шарик маны до предела сил! Емкость сосуда маны расширилась (+${gain} макс. маны)!`;
+    }
+  },
+  {
+    id: "wooden_stick_play",
+    category: "combat",
+    name: "🪵 Махать деревянной палкой",
+    minAge: 3, maxAge: 6, cost: 0,
+    desc: "Первые неуклюжие замахи во дворе.",
+    action: (p) => { p.swordGodExp += 6; return "Вы азартно сбивали крапиву деревянной палкой (+6 к стилю Меча)."; }
+  },
+
+  // Отрочество и школа (7 - 12 лет)
+  {
+    id: "sword_god_stance",
+    category: "combat",
+    name: "⚡ Стиль Бога Меча: Отработка прямого выпада",
+    minAge: 7, maxAge: 100, cost: 0,
+    desc: "Абсолютная скорость. Первый удар должен быть смертельным.",
+    action: (p) => { p.swordGodExp += 14; return "Тысячи повторений взмаха мечом сверху вниз. Мышцы гудят (+14 к Богу Меча)."; }
+  },
+  {
+    id: "water_god_parry",
+    category: "combat",
+    name: "💧 Стиль Бога Воды: Стойка парирования",
+    minAge: 7, maxAge: 100, cost: 0,
+    desc: "Терпение и отражение встречного клинка. Идеальная защита.",
+    action: (p) => { p.waterGodExp += 14; return "Вы отражали удары наставника, превращая его силу в свою контратаку (+14 к Богу Воды)."; }
+  },
+  {
+    id: "north_god_trick",
+    category: "combat",
+    name: "🌪️ Стиль Бога Севера: Бросок песка и акробатика",
+    minAge: 7, maxAge: 100, cost: 0,
+    desc: "В реальном бою нет правил. Победа любой ценой.",
+    action: (p) => { p.northGodExp += 14; return "Вы учились кувыркам, метанию предметов и атакам из слепой зоны (+14 к Богу Севера)."; }
+  },
+  {
+    id: "magic_chant_train",
+    category: "magic",
+    name: "✨ Медитация и чтение заклинаний",
+    minAge: 10, maxAge: 100, cost: 0,
+    desc: "Каналы уже сформированы. Тренировка оттачивает технику и контроль.",
+    action: (p) => {
+      let gain = (p.trait.id === "laplace_factor") ? 10 : 2; // После 10 лет растет мало
+      p.maxMana += gain; p.mana = p.maxMana; p.magicExp += 15;
+      return `Вы повторяли стихийные пассы. Прирост маны: +${gain} (Каналы сформированы), +15 опыта магии.`;
+    }
+  },
+  {
+    id: "gather_herbs",
+    category: "life",
+    name: "🌿 Сбор лечебных трав на опушке",
+    minAge: 7, maxAge: 100, cost: 0,
+    desc: "Помогает заработать первые монеты и изучить местную флору.",
+    action: (p) => {
+      let earned = Math.floor(Math.random() * 12) + 5;
+      p.coins += earned; p.intellect += 2;
+      return `Вы насобирали корзину целебного мха и продали травнику (+${earned} монет, +2 Знания).`;
+    }
+  },
+
+  // Юность и взрослая жизнь (13+ лет)
+  {
+    id: "adventurer_guild_hunt",
+    category: "combat",
+    name: "🐺 Контракт Гильдии: Охота на монстров",
+    minAge: 12, maxAge: 100, cost: 0,
+    desc: "Зачистка окрестностей от кобр, волков или бродячих гоблинов.",
+    action: (p) => {
+      let combatPower = Math.max(p.swordGodExp, p.waterGodExp, p.northGodExp) + (p.magicExp / 2);
+      if (combatPower > 30 || Math.random() > 0.3) {
+        let loot = Math.floor(Math.random() * 35) + 20;
+        p.coins += loot;
+        p.swordGodExp += 8;
+        return `Успешная охота! Трофеи сданы гильдмастеру (+${loot} монет, +боевой опыт).`;
+      } else {
+        p.hp = Math.max(10, p.hp - 25);
+        return `Монстр оказался проворнее! Вы получили рваную рану (-25 HP), но смогли спастись.`;
+      }
+    }
+  },
+  {
+    id: "read_ancient_tome",
+    category: "life",
+    name: "📚 Изучение языков мира и географии",
+    minAge: 8, maxAge: 100, cost: 10,
+    desc: "Язык Бога Богов, язык Демонов и хроники Войны Лапласа.",
+    action: (p) => {
+      if (p.coins < 10) return "Не хватает монет на покупку чернил и аренду свитков (нужно 10🪙).";
+      p.coins -= 10; p.intellect += 8;
+      return "Вы погрузились в древние манускрипты (+8 к Знаниям).";
+    }
+  },
+  {
+    id: "tavern_feast",
+    category: "life",
+    name: "🍺 Посиделки в таверне авантюристов",
+    minAge: 16, maxAge: 100, cost: 25,
+    desc: "Слушать байки, снимать стресс и восстанавливать душевные силы.",
+    action: (p) => {
+      if (p.coins < 25) return "В карманах пусто для шумной выпивки (нужно 25🪙).";
+      p.coins -= 25; p.hp = Math.min(p.maxHp, p.hp + 20);
+      return "Кружка холодного эля и жареное мясо у очага (+20 Здоровья).";
+    }
+  }
 ];
 
 const SYLLABLES = {
@@ -76,16 +262,5 @@ const SURNAMES = {
 const ROLES = [
   "Вольный авантюрист (Ранг D)", "Наемник отряда клинков", "Ученик гильдии магов",
   "Странствующий торговец", "Охотник на чудовищ", "Младший послушник часовни",
-  "Городской стражник", "Студент Академии Магии"
-];
-
-const CANON_NPCS = [
-  { id: "sylphie", name: "Сильфиетта", gender: "female", race: "Полуэльф", role: "Подруга детства • Маг без слов", relation: 70, isCanon: true, minAge: 4 },
-  { id: "roxy", name: "Рокси Мигурдия", gender: "female", race: "Мигурд", role: "Наставница • Маг Святого Ранга", relation: 65, isCanon: true, minAge: 5 },
-  { id: "eris", name: "Эрис Бореас Грейрат", gender: "female", race: "Человек", role: "Леди Бореас • Бешеная мечница", relation: 40, isCanon: true, minAge: 7 },
-  { id: "ghislaine", name: "Гилен Дедольдия", gender: "female", race: "Зверочеловек", role: "Мечница Ранга Царя Меча", relation: 50, isCanon: true, minAge: 7 },
-  { id: "ruijerd", name: "Руджерд Спардия", gender: "male", race: "Спард", role: "Тупик • Воин сотен битв", relation: 60, isCanon: true, minAge: 10 },
-  { id: "elinalise", name: "Элинализ Драгонроуд", gender: "female", race: "Эльф", role: "Опытная воительница • Ранг S", relation: 50, isCanon: true, minAge: 12 },
-  { id: "cliff", name: "Клифф Гриммор", gender: "male", race: "Человек", role: "Гениальный экзорцист Милиса", relation: 45, isCanon: true, minAge: 10 },
-  { id: "zanoba", name: "Заноба Широне", gender: "male", race: "Мико", role: "Благословенный принц чудовищной силы", relation: 55, isCanon: true, minAge: 11 }
+  "Городской стражник", "Студент Академии"
 ];
