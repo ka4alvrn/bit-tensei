@@ -3,10 +3,13 @@ const START_YEAR = 407; // 407 г. Календаря Дракона (К.Д.)
 const SWORD_RANKS = ["Нет", "Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог ⚔️"];
 const MAGIC_RANKS = ["Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог 🔮"];
 
+const ADVENTURER_RANKS = ["F", "E", "D", "C", "B", "A", "S"];
+const ADVENTURER_REQ = { F: 0, E: 30, D: 80, C: 180, B: 380, A: 750, S: 1500 };
+
 const RACES = {
   human: {
     id: "human", name: "Человек", maxAge: 75,
-    desc: "Быстро обучаются, сбалансированы во всем.",
+    desc: "Быстро обучаются, универсальны во всем.",
     bonus: { baseMana: 25, hp: 0, int: 5, coins: 50, manaMod: 1.0 }
   },
   demon: {
@@ -105,64 +108,95 @@ const SEVEN_GREAT_POWERS = [
   { rank: 7, title: "Бог Севера", name: "Александр (Кальман III)", cp: 180000 }
 ];
 
-const SHOP_ITEMS = [
-  { id: "iron_sword", type: "weapon", name: "Железный палаш", cost: 60, cp: 200, desc: "Острое лезвие стражников (+200 БМ)." },
-  { id: "oak_staff", type: "weapon", name: "Посох из ветви Энта", cost: 90, cp: 280, desc: "Усиливает проводимость магии (+280 БМ)." },
-  { id: "dragon_blade", type: "weapon", name: "Клинок из кости Дракона", cost: 650, cp: 2200, desc: "Режет сталь как масло (+2200 БМ)." },
-  { id: "aqua_heartia", type: "weapon", name: "Посох Гордости Водного Океана", cost: 3500, cp: 12000, desc: "Легендарный артефакт Божественного Класса (+12000 БМ)." },
-
-  { id: "leather_armor", type: "armor", name: "Кожаный доспех охотника", cost: 50, cp: 150, hp: 20, desc: "Защита от клыков (+150 БМ, +20 HP)." },
-  { id: "mithril_chain", type: "armor", name: "Мифриловая кольчуга", cost: 400, cp: 1400, hp: 50, desc: "Легкая и прочная (+1400 БМ, +50 HP)." },
-  { id: "magic_armor", type: "armor", name: "Магическая Броня (Прототип)", cost: 15000, cp: 50000, hp: 200, desc: "Автономный костюм (+50000 БМ, +200 HP)." },
-
-  { id: "ring_mana", type: "accessory", name: "Кольцо Концентрации Маны", cost: 120, cp: 400, desc: "+400 БМ к магии." },
-  { id: "heal_potion", type: "potion", name: "Зелье Исцеления Святого Ранга", cost: 25, heal: 50, desc: "Восстанавливает 50 HP в бою." }
+// Подземелья Лабиринты
+const DUNGEONS = [
+  {
+    id: "dung_cellar", name: "🕳️ Затопленные Катакомбы Гоблинов",
+    reqRank: "F", maxFloors: 5, cpBase: 250,
+    desc: "Темные сырые тоннели под окраинами. Идеально для новичков."
+  },
+  {
+    id: "dung_ruins", name: "🏛️ Руины Павших Рыцарей Меча",
+    reqRank: "D", maxFloors: 8, cpBase: 1200,
+    desc: "Каменные залы с ловушками и ожившими доспехами стражей."
+  },
+  {
+    id: "dung_teleport", name: "🌀 Лабиринт Телепортации Бегаритта",
+    reqRank: "B", maxFloors: 12, cpBase: 15000,
+    desc: "Легендарный лабиринт телепортов! Шаг влево может швырнуть на 3 этажа назад."
+  },
+  {
+    id: "dung_dragon", name: "🐉 Бездна Драконьего Гребня",
+    reqRank: "S", maxFloors: 15, cpBase: 90000,
+    desc: "В жерле вулкана спят древние виверны и сам Красный Дракон."
+  }
 ];
 
-const GUILD_QUESTS = [
-  { id: "q_f", rank: "F", name: "Очистка подвалов от Гигантских Крыс", enemy: "Крыса-мутант", cp: 120, hp: 60, reward: 25 },
-  { id: "q_e", rank: "E", name: "Охота на Клыкастых Кабанов в лесу", enemy: "Клыкастый Вепрь", cp: 350, hp: 120, reward: 60 },
-  { id: "q_d", rank: "D", name: "Стая Двуглавых Волков на тракте", enemy: "Вожак Двуглавых Волков", cp: 900, hp: 250, reward: 150 },
-  { id: "q_c", rank: "C", name: "Зачистка гнезда Красных Кобр", enemy: "Королевская Плесневая Кобра", cp: 2800, hp: 600, reward: 400 },
-  { id: "q_b", rank: "B", name: "Убийство Бродячего Каменного Энта", enemy: "Древний Каменный Энт", cp: 8500, hp: 1600, reward: 1100 },
-  { id: "q_a", rank: "A", name: "Охота на Виверну в снежных пиках", enemy: "Ледяная Виверна", cp: 32000, hp: 4500, reward: 4000 },
-  { id: "q_s", rank: "S", name: "Логово Красного Блуждающего Дракона", enemy: "Красный Дракон Пустоши", cp: 110000, hp: 18000, reward: 16000 }
+// Большой пул всех контрактов гильдии
+const ALL_GUILD_QUESTS = [
+  { id: "q_f1", rank: "F", name: "🐀 Зачистка винного погреба от крыс-мутантов", enemy: "Крыса-людоед", cp: 110, hp: 55, reward: 20, gp: 8 },
+  { id: "q_f2", rank: "F", name: "🌿 Сбор ядовитой белладонны у волчьих нор", enemy: "Дикий волчонок", cp: 140, hp: 65, reward: 25, gp: 10 },
+  { id: "q_e1", rank: "E", name: "🐗 Охота на Клыкастых Кабанов в дубраве", enemy: "Клыкастый Вепрь", cp: 320, hp: 110, reward: 55, gp: 15 },
+  { id: "q_e2", rank: "E", name: "🍄 Истребление Плесневых Слизней в болоте", enemy: "Кислотный Слизень", cp: 380, hp: 130, reward: 70, gp: 18 },
+  { id: "q_d1", rank: "D", name: "🐺 Стая Двуглавых Волков на тракте", enemy: "Вожак Двуглавых", cp: 850, hp: 240, reward: 140, gp: 25 },
+  { id: "q_d2", rank: "D", name: "🧌 Набег шайки лесных гоблинов-лучников", enemy: "Гоблин-главарь", cp: 1100, hp: 300, reward: 180, gp: 30 },
+  { id: "q_c1", rank: "C", name: "🐍 Гнездо Плесневых Красных Кобр", enemy: "Красная Кобра", cp: 2600, hp: 580, reward: 380, gp: 45 },
+  { id: "q_c2", rank: "C", name: "🧟 Зачистка склепа от беспокойных мертвецов", enemy: "Рыцарь-скелет", cp: 3200, hp: 700, reward: 480, gp: 50 },
+  { id: "q_b1", rank: "B", name: "🗿 Убийство Древнего Каменного Энта", enemy: "Каменный Энт", cp: 8200, hp: 1500, reward: 1100, gp: 80 },
+  { id: "q_b2", rank: "B", name: "🦂 Песчаные Скорпионы пустошей Бегаритта", enemy: "Императорский Скорпион", cp: 11000, hp: 2100, reward: 1500, gp: 95 },
+  { id: "q_a1", rank: "A", name: "🦅 Охота на Ледяную Виверну в пиках", enemy: "Ледяная Виверна", cp: 31000, hp: 4200, reward: 3800, gp: 150 },
+  { id: "q_a2", rank: "A", name: "🦍 Снежный Демонический Бегемот", enemy: "Пещерный Бегемот", cp: 42000, hp: 6000, reward: 5200, gp: 180 },
+  { id: "q_s1", rank: "S", name: "🐉 Логово Красного Блуждающего Дракона", enemy: "Красный Дракон", cp: 120000, hp: 17000, reward: 17000, gp: 300 },
+  { id: "q_s2", rank: "S", name: "💀 Древний Архилич забытой цивилизации", enemy: "Архилич Бездны", cp: 180000, hp: 24000, reward: 25000, gp: 450 }
+];
+
+const SHOP_ITEMS = [
+  { id: "iron_sword", type: "weapon", name: "⚔️ Железный палаш стражи", cost: 60, cp: 200, desc: "Острое лезвие стражников (+200 БМ)." },
+  { id: "oak_staff", type: "weapon", name: "🪄 Посох из ветви Энта", cost: 90, cp: 280, desc: "Усиливает проводимость магии (+280 БМ)." },
+  { id: "dragon_blade", type: "weapon", name: "🗡️ Клинок из кости Дракона", cost: 650, cp: 2200, desc: "Режет сталь как масло (+2200 БМ)." },
+  { id: "aqua_heartia", type: "weapon", name: "🌟 Посох Гордости Водного Океана", cost: 3500, cp: 12000, desc: "Легендарный артефакт Божественного Класса (+12000 БМ)." },
+
+  { id: "leather_armor", type: "armor", name: "🛡️ Кожаный доспех охотника", cost: 50, cp: 150, hp: 20, desc: "Защита от клыков (+150 БМ, +20 HP)." },
+  { id: "mithril_chain", type: "armor", name: "⛓️ Мифриловая кольчуга", cost: 400, cp: 1400, hp: 50, desc: "Легкая и прочная (+1400 БМ, +50 HP)." },
+  { id: "magic_armor", type: "armor", name: "🤖 Магическая Броня (Прототип)", cost: 15000, cp: 50000, hp: 200, desc: "Автономный костюм титанов (+50000 БМ, +200 HP)." },
+
+  { id: "ring_mana", type: "accessory", name: "💍 Кольцо Концентрации Маны", cost: 120, cp: 400, desc: "+400 БМ к силе заклинаний." },
+  { id: "heal_potion", type: "potion", name: "🧪 Зелье Исцеления Святого Ранга", cost: 25, heal: 50, desc: "Восстанавливает 50 HP в бою или вне боя." }
 ];
 
 const CANON_NPCS = [
-  { id: "sylphie", name: "Сильфиетта", gender: "female", race: "Полуэльф", role: "Подруга детства • Маг без слов", region: "asura", minAge: 4, maxAge: 8, baseChance: 0.12 },
-  { id: "roxy", name: "Рокси Мигурдия", gender: "female", race: "Мигурд", role: "Наставница • Маг Святого Ранга", region: "asura", minAge: 5, maxAge: 12, baseChance: 0.10 },
-  { id: "eris", name: "Эрис Бореас Грейрат", gender: "female", race: "Человек", role: "Леди Бореас • Бешеная мечница", region: "asura", minAge: 7, maxAge: 13, baseChance: 0.10 },
-  { id: "ghislaine", name: "Гилен Дедольдия", gender: "female", race: "Зверочеловек", role: "Мечница Ранга Царя Меча", region: "asura", minAge: 7, maxAge: 15, baseChance: 0.08 },
-  { id: "ruijerd", name: "Руджерд Спардия", gender: "male", race: "Спард", role: "Тупик • Воин сотен битв", region: "demon", minAge: 10, maxAge: 25, baseChance: 0.09 },
-  { id: "cliff", name: "Клифф Гриммор", gender: "male", race: "Человек", role: "Гениальный экзорцист Милиса", region: "milis", minAge: 10, maxAge: 16, baseChance: 0.09 },
-  { id: "zanoba", name: "Заноба Широне", gender: "male", race: "Мико", role: "Принц чудовищной силы", region: "ranoa", minAge: 12, maxAge: 20, baseChance: 0.08 }
+  { id: "sylphie", name: "Сильфиетта", gender: "female", race: "Полуэльф", role: "Подруга детства • Маг без слов", cp: 1200, region: "asura", minAge: 4, maxAge: 8, baseChance: 0.14 },
+  { id: "roxy", name: "Рокси Мигурдия", gender: "female", race: "Мигурд", role: "Наставница • Маг Святого Ранга", cp: 4500, region: "asura", minAge: 5, maxAge: 12, baseChance: 0.12 },
+  { id: "eris", name: "Эрис Бореас Грейрат", gender: "female", race: "Человек", role: "Леди Бореас • Бешеная мечница", cp: 2200, region: "asura", minAge: 7, maxAge: 13, baseChance: 0.12 },
+  { id: "ghislaine", name: "Гилен Дедольдия", gender: "female", race: "Зверочеловек", role: "Мечница Ранга Царя Меча", cp: 28000, region: "asura", minAge: 7, maxAge: 15, baseChance: 0.10 },
+  { id: "ruijerd", name: "Руджерд Спардия", gender: "male", race: "Спард", role: "Тупик • Воин сотен битв", cp: 35000, region: "demon", minAge: 10, maxAge: 25, baseChance: 0.10 },
+  { id: "cliff", name: "Клифф Гриммор", gender: "male", race: "Человек", role: "Гениальный экзорцист Милиса", cp: 3000, region: "milis", minAge: 10, maxAge: 16, baseChance: 0.10 },
+  { id: "zanoba", name: "Заноба Широне", gender: "male", race: "Мико", role: "Принц чудовищной силы", cp: 18000, region: "ranoa", minAge: 12, maxAge: 20, baseChance: 0.09 }
 ];
 
 const SCHOOLS = [
   {
-    id: "ranoa_academy", name: "Магическая Академия Раноа 🎓",
+    id: "ranoa_academy", name: "🎓 Магическая Академия Раноа",
     regionKey: "ranoa", region: "Раноа (Шария)", minAge: 13, cost: 300,
     desc: "Главный центр изучения высшей магии. Лекции магов Святого и Королевского рангов."
   },
   {
-    id: "asura_academy", name: "Королевская Академия Асуры 🏰",
+    id: "asura_academy", name: "🏰 Королевская Академия Асуры",
     regionKey: "asura", region: "Асура (Арс)", minAge: 12, cost: 450,
     desc: "Элитное заведение высшей знати и королевских рыцарей."
   },
   {
-    id: "sword_sanctuary", name: "Святая Земля Меча (Додзё Гула) 🗡️",
-    regionKey: "ranoa", region: "Святая Земля Меча", minAge: 10, cost: 150, minSwordExp: 35,
+    id: "sword_sanctuary", name: "🗡️ Святая Земля Меча (Додзё Гула)",
+    regionKey: "ranoa", region: "Святая Земля Меча", minAge: 10, cost: 150,
     desc: "Беспощадные тренировки в снежных пиках под началом Бога Меча."
   },
   {
-    id: "milis_seminary", name: "Семинария Святого Милиса ⛪",
+    id: "milis_seminary", name: "⛪ Семинария Святого Милиса",
     regionKey: "milis", region: "Милис (Милисион)", minAge: 11, cost: 200,
     desc: "Священная магия лечения, детоксикации и барьеры."
   }
 ];
 
-// Активности с четкими категориями
 const ACTIVITIES = [
   // 1. Детство (childhood)
   {
@@ -178,7 +212,7 @@ const ACTIVITIES = [
     action: (p) => { p.intellect += 2; return "Мать читала вам старинные легенды о Шестиликом Мире (+2 к Знаниям)."; }
   },
   {
-    id: "wooden_stick_play", category: "childhood", name: "🪵 Размахивать деревянной палкой",
+    id: "wooden_stick_play", category: "childhood", name: "🪵 Размахивать деревянной палкой во дворе",
     minAge: 3, maxAge: 6, cost: 0, apCost: 1,
     desc: "Первые неуклюжие замахи во дворе дома.",
     action: (p) => { p.swordGodExp += 8; return "Вы азартно сбивали крапиву во дворе деревянной палкой (+8 к стилю Меча)."; }
@@ -193,9 +227,7 @@ const ACTIVITIES = [
       let base = 6;
       let mod = (p.trait.growthMod || 1.0) * (p.raceObj.bonus.manaMod || 1.0);
       let gain = Math.round(base * mod);
-      p.maxMana += gain;
-      p.mana = p.maxMana;
-      p.magicExp += 6;
+      p.maxMana += gain; p.mana = p.maxMana; p.magicExp += 6;
       return `Вы концентрировали шар маны до дрожи в ладонях! Сосуд маны расширился: <b>+${gain} макс. маны</b>!`;
     }
   },
@@ -208,25 +240,25 @@ const ACTIVITIES = [
 
   // 3. Боевые искусства (combat)
   {
-    id: "sword_practice", category: "combat", name: "🗡️ Стойка Бога Меча: Выпад",
+    id: "sword_practice", category: "combat", name: "🗡️ Стойка Бога Меча: Выпад Света",
     minAge: 7, maxAge: 100, cost: 0, apCost: 1,
     desc: "Отработка молниеносного первого взмаха.",
     action: (p) => { p.swordGodExp += 15; return "Клинок со свистом рассекает воздух (+15 к Богу Меча)."; }
   },
   {
-    id: "water_parry", category: "combat", name: "💧 Стойка Бога Воды: Парирование",
+    id: "water_parry", category: "combat", name: "💧 Стойка Бога Воды: Абсолютное Парирование",
     minAge: 7, maxAge: 100, cost: 0, apCost: 1,
     desc: "Отражение встречных ударов и непробиваемая защита.",
     action: (p) => { p.waterGodExp += 15; return "Вы плавным круговым движением гасили удары напарника (+15 к Богу Воды)."; }
   },
   {
-    id: "north_tricks", category: "combat", name: "🌪️ Стойка Бога Севера: Уловки",
+    id: "north_tricks", category: "combat", name: "🌪️ Стойка Бога Севера: Непредсказуемый Выпад",
     minAge: 7, maxAge: 100, cost: 0, apCost: 1,
     desc: "Броски песка, кувырки и атаки из слепой зоны.",
     action: (p) => { p.northGodExp += 15; return "Вы освоили внезапный выпад из переката (+15 к Богу Севера)."; }
   },
 
-  // 4. Академия (school - доступно только студентам)
+  // 4. Академия (school)
   {
     id: "school_lesson", category: "school", name: "🎓 Посетить академическую лекцию и семинар",
     minAge: 10, maxAge: 100, cost: 0, apCost: 1,
@@ -234,16 +266,13 @@ const ACTIVITIES = [
     action: (p) => {
       if (!p.enrolledSchool) return "Вы не зачислены ни в одну Академию! Поступите во вкладке «Мир».";
       p.schoolProgress = (p.schoolProgress || 1);
-      p.intellect += 6;
-      p.magicExp += 15;
+      p.intellect += 6; p.magicExp += 15;
 
       if (Math.random() > 0.55) {
         p.schoolProgress++;
         if (p.schoolProgress > 4) {
           p.graduatedSchools.push(p.enrolledSchool);
-          let scName = p.enrolledSchool;
-          p.enrolledSchool = null;
-          p.coins += 150;
+          p.enrolledSchool = null; p.coins += 150;
           return `🏆 <b>ТОРЖЕСТВЕННЫЙ ВЫПУСК!</b> Вы с отличием окончили обучение! Получен диплом и премия (+150🪙).`;
         }
         return `📜 Вы сдали семестровый зачет! Текущий курс: ${p.schoolProgress}/4.`;
@@ -254,19 +283,19 @@ const ACTIVITIES = [
 
   // 5. Быт и работа (life)
   {
-    id: "gather_herbs", category: "life", name: "🌿 Сбор целебных трав на опушке",
+    id: "gather_herbs", category: "life", name: "🌿 Сбор редких трав и целебных кореньев",
     minAge: 6, maxAge: 100, cost: 0, apCost: 1,
     desc: "Несложная подработка для пополнения запаса монет.",
     action: (p) => {
-      let earned = Math.floor(Math.random() * 12) + 6;
+      let earned = Math.floor(Math.random() * 14) + 6;
       p.coins += earned;
       return `Вы наполнили корзину мятой и корнями маны, сдав травнику (+${earned} монет).`;
     }
   },
   {
-    id: "read_scrolls", category: "life", name: "📚 Изучение языков Шестиликого Мира",
+    id: "read_scrolls", category: "life", name: "📜 Изучение древних свитков и летописей",
     minAge: 5, maxAge: 100, cost: 5, apCost: 1,
-    desc: "Язык Богов, Демонов и древние хроники.",
+    desc: "Язык Богов, Демонов и хроники Первой Великой Войны.",
     action: (p) => {
       if (p.coins < 5) return "Не хватает монет на аренду свитков (нужно 5🪙).";
       p.coins -= 5; p.intellect += 6;
@@ -345,8 +374,8 @@ const RANDOM_EVENTS = [
 ];
 
 const SYLLABLES = {
-  male: ["Вал", "Сед", "Лео", "Клод", "Жан", "Огюст", "Филипп", "Рей", "Люк", "Марк", "Ден", "Эд", "Рудеус", "Пол", "Клифф"],
-  female: ["Аме", "Селе", "Хиль", "Эле", "Клэр", "Роза", "Диа", "Лиза", "София", "Жанна", "Али", "Сильфи", "Эрис", "Рокси"],
-  suffix: ["рик", "берт", "ион", "ард", "ель", "ис", "дар", "монт", "валь", "ус", "етта"],
+  male: ["Вал", "Сед", "Лео", "Клод", "Жан", "Огюст", "Филипп", "Рей", "Люк", "Марк", "Ден", "Эд", "Рудеус", "Пол", "Клифф", "Арси", "Клайв"],
+  female: ["Аме", "Селе", "Хиль", "Эле", "Клэр", "Роза", "Диа", "Лиза", "София", "Жанна", "Али", "Сильфи", "Эрис", "Рокси", "Зенит", "Норн"],
+  suffix: ["рик", "берт", "ион", "ард", "ель", "ис", "дар", "монт", "валь", "ус", "етта", "ин"],
   surnames: ["Грейрат", "де Роа", "де Арс", "Блэквуд", "Фрост", "Клемент", "Дорудиа", "Мигурдия", "Спардия", "Шевалье"]
 };
