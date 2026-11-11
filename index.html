@@ -12,7 +12,7 @@
   <!-- Окно создания персонажа -->
   <div id="creation-overlay">
     <div class="modal-title">🔮 Колесо Сансары</div>
-    <div class="modal-sub">Перерождение в мире меча и магии</div>
+    <div class="modal-sub">Выберите судьбу для новой жизни в Шестиликом Мире</div>
 
     <div class="input-group">
       <label>Имя персонажа</label>
@@ -20,13 +20,13 @@
     </div>
 
     <div class="input-group">
-      <label>Регион рождения</label>
-      <select id="select-region" onchange="updateFamilySelect()"></select>
+      <label>Регион Рождения</label>
+      <select id="select-region" onchange="updateOriginSelect()"></select>
     </div>
 
     <div class="input-group">
-      <label>Сословие / Семья</label>
-      <select id="select-family"></select>
+      <label>Происхождение и Родословная</label>
+      <select id="select-origin"></select>
     </div>
 
     <button class="btn-main" onclick="confirmCreation()">✨ Воплотиться в новом теле</button>
@@ -56,7 +56,7 @@
 
     <div class="stats">
       <div class="stat">🧙 Ранг магии: <b id="magic">Новичок</b></div>
-      <div class="stat">⚔️ Меч: <b id="sword">Нет</b></div>
+      <div class="stat">⚔️ Стиль меча: <b id="sword">Нет</b></div>
       <div class="stat">📚 Знания: <b id="intellect">10</b></div>
       <div class="stat">🪙 Деньги: <b id="coins">0</b></div>
     </div>
@@ -74,7 +74,6 @@
   <button class="btn-main" onclick="ageUp()">⏳ Прожить 1 год</button>
   <button class="btn-secondary" onclick="showCreation()">🔄 Начать новую жизнь (Реинкарнация)</button>
 
-  <!-- Подключаем базу данных и логику -->
   <script src="data.js"></script>
   <script src="game.js"></script>
 </body>
