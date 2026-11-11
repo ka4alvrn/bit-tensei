@@ -1,0 +1,85 @@
+:root {
+  --bg: #0b0c10;
+  --card: #151821;
+  --card-border: rgba(255, 255, 255, 0.08);
+  --accent: #9d4edd;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --mana: #38bdf8;
+  --gold: #fbbf24;
+  --hp: #ef4444;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  margin: 0; padding: 12px; background: var(--bg); color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  user-select: none;
+}
+
+/* Окно создания персонажа */
+#creation-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(11, 12, 16, 0.98); z-index: 100;
+  padding: 16px; overflow-y: auto; display: flex; flex-direction: column;
+}
+.modal-title { font-size: 22px; font-weight: 800; text-align: center; color: var(--accent); margin-bottom: 4px; }
+.modal-sub { font-size: 12px; color: var(--muted); text-align: center; margin-bottom: 16px; }
+
+.input-group { margin-bottom: 12px; }
+label { font-size: 11px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; }
+input, select {
+  width: 100%; padding: 12px; background: #1c202c; border: 1px solid var(--card-border);
+  color: #fff; border-radius: 10px; font-size: 14px; outline: none;
+}
+
+/* Карточка персонажа */
+.card {
+  background: var(--card); border-radius: 16px; padding: 14px;
+  border: 1px solid var(--card-border); margin-bottom: 10px;
+}
+.header { display: flex; justify-content: space-between; align-items: flex-start; }
+.name { font-size: 18px; font-weight: 700; }
+.gen-badge { font-size: 10px; background: #272a38; color: var(--muted); padding: 2px 6px; border-radius: 4px; }
+
+/* Редкости талантов */
+.badge-common { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4); }
+.badge-rare { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
+.badge-epic { background: rgba(192, 132, 252, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
+.badge-legendary { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid rgba(251, 191, 36, 0.4); }
+.badge-mythic { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
+.region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; }
+
+.bar-bg { height: 7px; background: #232734; border-radius: 4px; overflow: hidden; margin-top: 4px; }
+.bar-mana { height: 100%; background: var(--mana); transition: width 0.3s; }
+
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
+.stat { background: #1a1e29; padding: 7px 10px; border-radius: 8px; }
+
+/* Лог событий */
+.log-box {
+  background: var(--card); border-radius: 14px; padding: 12px; height: 190px;
+  overflow-y: auto; font-size: 13px; line-height: 1.45; border: 1px solid var(--card-border);
+  margin-bottom: 10px;
+}
+.log-entry { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+.log-year { color: var(--accent); font-weight: 700; }
+
+.grid-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+button {
+  background: #1e222e; color: #fff; border: 1px solid var(--card-border);
+  padding: 12px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+button:active { transform: scale(0.97); background: #282d3d; }
+
+.btn-main {
+  width: 100%; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
+  padding: 16px; font-size: 16px; border: none; font-weight: 700;
+  box-shadow: 0 4px 15px rgba(157, 78, 221, 0.35); border-radius: 14px; margin-bottom: 8px;
+}
+.btn-secondary {
+  background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted);
+  width: 100%; padding: 8px; font-size: 11px; border-radius: 8px;
+}
