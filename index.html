@@ -35,7 +35,26 @@
     </button>
   </div>
 
-  <!-- Общая карточка персонажа (видна во всех вкладках) -->
+  <!-- Модальное окно действий с конкретным NPC -->
+  <div id="npc-modal" onclick="closeNPCModal(event)">
+    <div class="npc-sheet" onclick="event.stopPropagation()">
+      <div class="sheet-header">
+        <div class="sheet-name" id="modal-npc-name">Имя NPC</div>
+        <div class="sheet-sub" id="modal-npc-sub">Раса • Роль</div>
+        <div style="margin-top: 8px; font-size: 13px;">
+          Статус: <b id="modal-npc-status">Друг</b> (<span id="modal-npc-rel">70%</span>)
+        </div>
+      </div>
+
+      <div class="npc-actions-grid" id="modal-npc-buttons">
+        <!-- Кнопки действий генерируются через JS -->
+      </div>
+      
+      <button style="width: 100%; margin-top: 12px; background: #1c202b;" onclick="closeNPCModal()">Назад</button>
+    </div>
+  </div>
+
+  <!-- Общая карточка персонажа -->
   <div class="card">
     <div class="header">
       <div>
@@ -71,6 +90,9 @@
 
   <!-- ВКЛАДКА 2: ОТНОШЕНИЯ -->
   <div id="tab-relations" class="tab-content">
+    <button style="width: 100%; margin-bottom: 12px; background: #262c3d; font-size: 13px;" onclick="meetStranger()">
+      🔍 Отправиться на поиски новых знакомых
+    </button>
     <div id="relations-list"></div>
   </div>
 
