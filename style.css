@@ -24,7 +24,7 @@ html, body {
   user-select: none; -webkit-user-select: none;
 }
 
-/* Модальные оверлеи */
+/* Модальные окна */
 #creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #dungeon-modal, #action-modal {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(11, 12, 16, 0.98); z-index: 200;
@@ -112,6 +112,13 @@ input:focus, select:focus { border-color: var(--accent); }
 .cp-banner b { font-size: 16px; color: #c084fc; }
 .world-rank-badge { font-size: 10px; padding: 3px 7px; border-radius: 5px; background: #4c1d95; color: #ddd6fe; margin-left: 4px; }
 
+/* Молва Бардов и Живая Слава */
+.bard-fame-strip {
+  background: linear-gradient(90deg, #2b1f0c, #1f1828); border: 1px solid rgba(251, 191, 36, 0.35);
+  border-radius: 8px; padding: 6px 10px; font-size: 11px; color: #fef08a; margin: 6px 0 4px;
+  display: flex; align-items: center; gap: 6px; font-style: italic;
+}
+
 /* Подпанель глаз и языков */
 .char-sub-panel { margin: 8px 0 4px; }
 .eyes-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
@@ -150,6 +157,7 @@ input:focus, select:focus { border-color: var(--accent); }
 .badge-epic { background: rgba(192, 132, 252, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
 .badge-legendary { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid rgba(251, 191, 36, 0.4); }
 .badge-mythic { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; }
+.badge-underground { background: rgba(185, 28, 28, 0.25); color: #fca5a5; border: 1px solid #dc2626; }
 
 .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; font-weight: 600; }
 .region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; display: inline-block; }
@@ -188,6 +196,7 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 .btn-secondary { background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted) !important; width: 100%; padding: 9px; font-size: 11px; border-radius: 8px; }
 .btn-find { width: 100%; margin-bottom: 10px; background: #262c3d; font-size: 13px; }
 .btn-challenge { background: #b91c1c !important; font-size: 11px !important; padding: 6px 10px !important; }
+.btn-sell { background: #854d0e !important; border-color: #eab308 !important; color: #fef08a !important; font-size: 11px !important; padding: 6px 10px !important; }
 
 .action-danger { background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.4) !important; color: #f87171 !important; }
 .action-love { background: rgba(244, 114, 182, 0.15) !important; border-color: rgba(244, 114, 182, 0.4) !important; color: #f472b6 !important; }
@@ -219,7 +228,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 
 /* Карточки контента */
 .activity-card, .job-card, .relation-card, .school-card, .shop-item, .quest-card,
-.travel-card, .estate-card, .lang-card, .castle-card, .caravan-card, .tablet-card, .perugius-card {
+.travel-card, .estate-card, .lang-card, .castle-card, .caravan-card, .tablet-card,
+.perugius-card, .testament-card {
   background: var(--card); border-radius: 13px; padding: 13px;
   border: 1px solid var(--card-border); margin-bottom: 9px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
@@ -247,6 +257,8 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
   padding: 11px; margin-top: 9px; border-radius: 0 0 10px 10px;
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
 }
+.npc-action-full { grid-column: span 2; }
+.status-dead { color: #9ca3af !important; text-decoration: line-through; }
 
 /* Модалки */
 .birth-sheet, .event-sheet, .battle-sheet {
