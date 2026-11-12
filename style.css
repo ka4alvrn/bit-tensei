@@ -24,8 +24,8 @@ html, body {
   user-select: none; -webkit-user-select: none;
 }
 
-/* Модальные окна */
-#creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #dungeon-modal {
+/* Модальные оверлеи */
+#creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #dungeon-modal, #action-modal {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(11, 12, 16, 0.98); z-index: 200;
   padding: 16px; overflow-y: auto; display: flex; flex-direction: column;
@@ -79,21 +79,14 @@ input:focus, select:focus { border-color: var(--accent); }
   box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
-/* ==========================================
-   ГЛАВНАЯ КАРТОЧКА ПЕРСОНАЖА (РАЗГРАНИЧЕНИЕ)
-   ========================================== */
+/* Карточки */
 .card {
   background: var(--card); border-radius: 16px; padding: 14px;
   border: 1px solid var(--card-border); margin-bottom: 12px;
 }
+.char-main-card { box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); }
 
-.char-main-card {
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-}
-
-.char-header-section {
-  display: flex; justify-content: space-between; align-items: flex-start;
-}
+.char-header-section { display: flex; justify-content: space-between; align-items: flex-start; }
 .name { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
 .gender-pill { font-size: 14px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; }
 
@@ -145,11 +138,10 @@ input:focus, select:focus { border-color: var(--accent); }
 .bar-hp { background: var(--hp); }
 .bar-relation { background: var(--green); }
 
-/* Статистика в 2 колонки */
+/* Статистика */
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; font-size: 12px; }
 .stat { background: #191c27; padding: 8px 10px; border-radius: 9px; color: var(--text); border: 1px solid rgba(255,255,255,0.03); }
 
-/* Социальные бейджи */
 .char-badges-grid { display: flex; flex-direction: column; gap: 4px; }
 
 /* Бейджи редкости */
@@ -162,7 +154,6 @@ input:focus, select:focus { border-color: var(--accent); }
 .tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; font-weight: 600; }
 .region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; display: inline-block; }
 
-/* Пульсация для сюжетных уведомлений */
 .pulse { animation: pulseAnim 1.8s infinite; }
 @keyframes pulseAnim {
   0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
@@ -170,7 +161,7 @@ input:focus, select:focus { border-color: var(--accent); }
   100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
 
-/* Лог событий */
+/* Лог */
 .log-box {
   background: var(--card); border-radius: 14px; padding: 13px; height: 260px;
   overflow-y: auto; font-size: 13px; line-height: 1.5; border: 1px solid var(--card-border);
@@ -202,24 +193,44 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 .action-love { background: rgba(244, 114, 182, 0.15) !important; border-color: rgba(244, 114, 182, 0.4) !important; color: #f472b6 !important; }
 .action-married { background: rgba(251, 191, 36, 0.2) !important; border-color: var(--gold) !important; color: var(--gold) !important; }
 
-/* ==========================================
-   КАРТОЧКИ ДЕЛ, СЛУЖБЫ И СОЦИАЛЬНЫХ СВЯЗЕЙ
-   ========================================== */
-.activity-card, .job-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card, .estate-card, .lang-card {
+/* =======================================================
+   ИСПРАВЛЕНИЕ РАСПЛЫВАНИЯ СЕТКИ СНАРЯЖЕНИЯ (КРИТИЧНО)
+   ======================================================= */
+.equip-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 8px;
+  width: 100%;
+}
+.equip-slot {
+  background: #1c202c; border: 1px solid var(--card-border); border-radius: 10px;
+  padding: 8px; text-align: center; cursor: pointer;
+  min-width: 0 !important;
+  overflow: hidden;
+}
+.slot-label { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
+.slot-val {
+  font-size: 11px; font-weight: 700; color: #fff; margin-top: 3px;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  display: block; width: 100%;
+}
+
+/* Карточки контента */
+.activity-card, .job-card, .relation-card, .school-card, .shop-item, .quest-card,
+.travel-card, .estate-card, .lang-card, .castle-card, .caravan-card, .tablet-card, .perugius-card {
   background: var(--card); border-radius: 13px; padding: 13px;
   border: 1px solid var(--card-border); margin-bottom: 9px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
-.quest-card, .shop-item, .travel-card, .estate-card, .job-card, .lang-card {
+.quest-card, .shop-item, .travel-card, .estate-card, .job-card, .lang-card, .caravan-card, .tablet-card {
   display: flex; justify-content: space-between; align-items: center; gap: 10px;
 }
 
-/* Красивое оформление карточки дела (как в службе) */
-.activity-card {
-  display: flex; justify-content: space-between; align-items: center; gap: 10px;
-}
-.act-info { flex: 1; }
+.activity-card { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.act-info { flex: 1; min-width: 0; }
 .act-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
 .act-name { font-size: 13px; font-weight: 700; color: #fff; }
 .act-age-badge {
@@ -230,15 +241,14 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 .act-req { font-size: 10px; color: var(--gold); font-weight: 600; }
 .act-btn { min-width: 90px; padding: 9px 12px; background: #312e81; font-size: 12px; }
 
-/* Социальные взаимодействия (внутри карточки NPC) */
+/* Социальные взаимодействия */
 .npc-inline-actions {
   background: #12151e; border-top: 1px solid var(--card-border);
   padding: 11px; margin-top: 9px; border-radius: 0 0 10px 10px;
   display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
 }
-.npc-action-full { grid-column: span 2; }
 
-/* Модалки рождения, событий, битв */
+/* Модалки */
 .birth-sheet, .event-sheet, .battle-sheet {
   background: var(--card); border: 1px solid var(--card-border);
   border-radius: 20px; padding: 20px; max-width: 480px; margin: auto; text-align: center;
@@ -254,12 +264,6 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 .battle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 700; }
 .battle-log { height: 110px; background: #0f1117; border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 12px; margin: 12px 0; border: 1px solid var(--card-border); color: #d1d5db; line-height: 1.45; }
 .battle-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-
-/* Снаряжение */
-.equip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-.equip-slot { background: #1c202c; border: 1px solid var(--card-border); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; }
-.slot-label { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
-.slot-val { font-size: 12px; font-weight: 700; color: #fff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Монумент Семи Сил */
 .powers-monument { background: #12141c; border-radius: 12px; border: 1px solid var(--card-border); padding: 8px; }
@@ -278,18 +282,20 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow
 
 .section-title { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; margin: 16px 0 7px; letter-spacing: 0.5px; }
 
-/* Нижнее меню */
+/* Нижняя навигация */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
   padding-bottom: env(safe-area-inset-bottom, 10px);
-  background: rgba(15, 17, 23, 0.95); backdrop-filter: blur(16px);
+  background: rgba(15, 17, 23, 0.96); backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px); border-top: 1px solid var(--card-border);
   display: flex; justify-content: space-around; align-items: center; z-index: 100;
 }
 .nav-item {
-  background: none; border: none; padding: 6px 10px;
+  flex: 1;
+  background: none; border: none; padding: 4px 2px;
   display: flex; flex-direction: column; align-items: center; gap: 2px;
   color: var(--muted) !important; font-size: 10px; font-weight: 600;
+  white-space: nowrap;
 }
 .nav-item .icon { font-size: 18px; }
 .nav-item.active { color: var(--accent-light) !important; }
