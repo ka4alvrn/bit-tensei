@@ -1,9 +1,11 @@
 :root {
   --bg: #0b0c10;
   --card: #151821;
+  --card-alt: #1a1e2b;
   --card-border: rgba(255, 255, 255, 0.08);
   --accent: #9d4edd;
   --accent-light: #c084fc;
+  --accent-glow: rgba(157, 78, 221, 0.35);
   --text: #f3f4f6;
   --muted: #9ca3af;
   --mana: #38bdf8;
@@ -22,7 +24,8 @@ html, body {
   user-select: none; -webkit-user-select: none;
 }
 
-#creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #hall-modal {
+/* Модальные окна */
+#creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #dungeon-modal {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
   background: rgba(11, 12, 16, 0.98); z-index: 200;
   padding: 16px; overflow-y: auto; display: flex; flex-direction: column;
@@ -32,26 +35,29 @@ html, body {
 .modal-sub { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 14px; }
 .helper-text { font-size: 11px; color: var(--accent-light); margin-top: 4px; }
 
-.input-group { margin-bottom: 10px; }
-label { font-size: 10px; font-weight: 600; color: var(--muted); display: block; margin-bottom: 4px; text-transform: uppercase; }
+.input-group { margin-bottom: 12px; }
+label { font-size: 10px; font-weight: 700; color: var(--muted); display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.5px; }
 input, select {
-  width: 100%; padding: 10px 12px; background: #1c202c; border: 1px solid var(--card-border);
+  width: 100%; padding: 11px 13px; background: #1c202c; border: 1px solid var(--card-border);
   color: #fff !important; border-radius: 10px; font-size: 13px; outline: none;
+  transition: border-color 0.2s;
 }
+input:focus, select:focus { border-color: var(--accent); }
 
-/* Кнопки переключения пола */
+/* Пол при создании */
 .gender-btn {
-  flex: 1; padding: 10px; background: #1c202c; border: 1px solid var(--card-border);
+  flex: 1; padding: 11px; background: #1c202c; border: 1px solid var(--card-border);
   color: var(--muted) !important; border-radius: 10px; font-size: 13px; font-weight: 700;
+  transition: all 0.2s;
 }
 .gender-btn.active {
   background: #312e81; border-color: #6366f1; color: #fff !important;
-  box-shadow: 0 0 10px rgba(99, 102, 241, 0.4);
+  box-shadow: 0 0 12px rgba(99, 102, 241, 0.45);
 }
 
 .btn-sound {
   background: #1c202c; border: 1px solid var(--card-border); color: var(--muted) !important;
-  padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-bottom: 4px;
+  padding: 4px 9px; border-radius: 6px; font-size: 10px; font-weight: 700; margin-bottom: 5px;
 }
 
 .tab-content { display: none !important; }
@@ -59,126 +65,200 @@ input, select {
 
 /* Подвкладки */
 .sub-nav {
-  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 8px;
+  display: flex; gap: 6px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 10px;
   scrollbar-width: none;
 }
 .sub-nav::-webkit-scrollbar { display: none; }
 .sub-tab-btn {
-  background: #1c202c; border: 1px solid var(--card-border); color: var(--muted) !important;
-  padding: 6px 12px; font-size: 11px; border-radius: 8px; white-space: nowrap; font-weight: 600;
+  background: #181c28; border: 1px solid var(--card-border); color: var(--muted) !important;
+  padding: 7px 13px; font-size: 11px; border-radius: 9px; white-space: nowrap; font-weight: 600;
+  transition: all 0.2s;
 }
 .sub-tab-btn.active {
   background: #4338ca; border-color: #6366f1; color: #fff !important;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.35);
 }
 
+/* ==========================================
+   ГЛАВНАЯ КАРТОЧКА ПЕРСОНАЖА (РАЗГРАНИЧЕНИЕ)
+   ========================================== */
 .card {
   background: var(--card); border-radius: 16px; padding: 14px;
-  border: 1px solid var(--card-border); margin-bottom: 10px;
+  border: 1px solid var(--card-border); margin-bottom: 12px;
 }
-.header { display: flex; justify-content: space-between; align-items: flex-start; }
-.name { font-size: 17px; font-weight: 700; color: #fff; }
+
+.char-main-card {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+
+.char-header-section {
+  display: flex; justify-content: space-between; align-items: flex-start;
+}
+.name { font-size: 18px; font-weight: 800; color: #fff; letter-spacing: 0.2px; }
+.gender-pill { font-size: 14px; background: rgba(255,255,255,0.06); padding: 2px 6px; border-radius: 6px; }
+
+.card-divider {
+  height: 1px; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.09), transparent);
+  margin: 10px 0;
+}
+
 .year-text { font-size: 11px; font-weight: 700; color: var(--gold); }
-.age-text { font-weight: 700; color: var(--accent); font-size: 14px; }
+.age-text { font-weight: 800; color: var(--accent-light); font-size: 14px; margin-top: 1px; }
 
 .ap-badge {
-  font-size: 10px; background: #312e81; color: #a5b4fc;
-  padding: 2px 7px; border-radius: 6px; font-weight: 700; border: 1px solid #4f46e5;
+  font-size: 10px; background: #26245c; color: #c7d2fe;
+  padding: 3px 8px; border-radius: 6px; font-weight: 700; border: 1px solid #4f46e5;
   margin-top: 3px; display: inline-block;
 }
 
 .cp-banner {
   background: linear-gradient(90deg, #1e1b4b, #2e1065); border: 1px solid #7c3aed;
-  border-radius: 10px; padding: 8px 12px; margin-top: 8px; display: flex;
+  border-radius: 11px; padding: 9px 12px; margin: 4px 0; display: flex;
   justify-content: space-between; align-items: center; font-size: 12px; font-weight: 700;
 }
-.cp-banner b { font-size: 15px; color: #a78bfa; }
-.world-rank-badge { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #4c1d95; color: #ddd6fe; margin-left: 4px; }
+.cp-banner b { font-size: 16px; color: #c084fc; }
+.world-rank-badge { font-size: 10px; padding: 3px 7px; border-radius: 5px; background: #4c1d95; color: #ddd6fe; margin-left: 4px; }
 
-/* Панель Демонических Глаз */
-.eyes-panel {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 6px;
-}
+/* Подпанель глаз и языков */
+.char-sub-panel { margin: 8px 0 4px; }
+.eyes-panel { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 .eye-slot {
   background: #141722; border: 1px dashed rgba(192, 132, 252, 0.3); border-radius: 8px;
-  padding: 5px 8px; font-size: 10px; color: #d8b4fe; text-align: center;
+  padding: 6px 8px; font-size: 10px; color: #d8b4fe; text-align: center;
 }
 .eye-slot.active {
   border-style: solid; border-color: #c084fc; background: rgba(192, 132, 252, 0.15);
   font-weight: 700; color: #f3e8ff;
 }
+.lang-strip {
+  background: #141722; border: 1px solid var(--card-border); border-radius: 8px;
+  padding: 6px 10px; font-size: 11px; color: #94a3b8; margin-top: 6px;
+}
+.lang-strip b { color: #e2e8f0; }
 
+/* Полоски параметров */
+.bars-section { margin: 8px 0; }
+.bar-meta { font-size: 11px; display: flex; justify-content: space-between; color: var(--text); font-weight: 600; }
+.bar-bg { height: 7px; background: #222634; border-radius: 5px; overflow: hidden; margin-top: 4px; }
+.bar-fill { height: 100%; transition: width 0.3s; }
+.bar-mana { background: var(--mana); }
+.bar-hp { background: var(--hp); }
+.bar-relation { background: var(--green); }
+
+/* Статистика в 2 колонки */
+.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; font-size: 12px; }
+.stat { background: #191c27; padding: 8px 10px; border-radius: 9px; color: var(--text); border: 1px solid rgba(255,255,255,0.03); }
+
+/* Социальные бейджи */
+.char-badges-grid { display: flex; flex-direction: column; gap: 4px; }
+
+/* Бейджи редкости */
 .badge-common { background: rgba(156, 163, 175, 0.2); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.4); }
 .badge-rare { background: rgba(56, 189, 248, 0.2); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); }
 .badge-epic { background: rgba(192, 132, 252, 0.2); color: #c084fc; border: 1px solid rgba(192, 132, 252, 0.4); }
 .badge-legendary { background: rgba(251, 191, 36, 0.2); color: var(--gold); border: 1px solid rgba(251, 191, 36, 0.4); }
 .badge-mythic { background: rgba(239, 68, 68, 0.25); color: #f87171; border: 1px solid #ef4444; }
 
-.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; margin-top: 4px; }
-.region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; margin-top: 4px; display: inline-block; }
+.tag { font-size: 11px; padding: 3px 8px; border-radius: 6px; display: inline-block; font-weight: 600; }
+.region-badge { font-size: 11px; background: #222634; color: #d1d5db; padding: 3px 8px; border-radius: 6px; display: inline-block; }
 
-.bar-meta { font-size: 11px; display: flex; justify-content: space-between; color: var(--text); }
-.bar-bg { height: 7px; background: #232734; border-radius: 4px; overflow: hidden; margin-top: 3px; }
-.bar-fill { height: 100%; transition: width 0.3s; }
-.bar-mana { background: var(--mana); }
-.bar-hp { background: var(--hp); }
-.bar-relation { background: var(--green); }
-
-.stats { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; font-size: 12px; }
-.stat { background: #1a1e29; padding: 7px 10px; border-radius: 8px; color: var(--text); }
-
-.log-box {
-  background: var(--card); border-radius: 14px; padding: 12px; height: 260px;
-  overflow-y: auto; font-size: 13px; line-height: 1.45; border: 1px solid var(--card-border);
-  margin-bottom: 10px; color: var(--text);
+/* Пульсация для сюжетных уведомлений */
+.pulse { animation: pulseAnim 1.8s infinite; }
+@keyframes pulseAnim {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }
+  70% { transform: scale(1.05); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
-.log-entry { margin-bottom: 6px; padding-bottom: 5px; border-bottom: 1px solid rgba(255,255,255,0.03); }
-.log-year { color: var(--accent); font-weight: 700; font-size: 11px; }
 
+/* Лог событий */
+.log-box {
+  background: var(--card); border-radius: 14px; padding: 13px; height: 260px;
+  overflow-y: auto; font-size: 13px; line-height: 1.5; border: 1px solid var(--card-border);
+  margin-bottom: 12px; color: var(--text);
+}
+.log-entry { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+.log-year { color: var(--accent); font-weight: 700; font-size: 11px; margin-right: 4px; }
+
+/* Кнопки */
 button {
-  background: #1e222e; color: #fff !important; border: 1px solid var(--card-border);
+  background: #1c202d; color: #fff !important; border: 1px solid var(--card-border);
   padding: 10px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer;
+  transition: transform 0.15s, background-color 0.2s, box-shadow 0.2s;
 }
 button:active { transform: scale(0.97); background: #282d3d; }
-button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; box-shadow: none; }
 
 .btn-main {
   width: 100%; background: linear-gradient(135deg, #7b2cbf, #9d4edd);
   padding: 15px; font-size: 15px; border: none; font-weight: 700;
-  box-shadow: 0 4px 15px rgba(157, 78, 221, 0.35); border-radius: 12px; margin-bottom: 8px;
+  box-shadow: 0 4px 16px var(--accent-glow); border-radius: 12px; margin-bottom: 8px;
 }
-.btn-random { background: #252a38; border: none; width: 100%; padding: 11px; border-radius: 10px; color: #fff; }
-.btn-secondary { background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted) !important; width: 100%; padding: 8px; font-size: 11px; border-radius: 8px; }
+.btn-random { background: #232836; border: 1px solid var(--card-border); width: 100%; padding: 11px; border-radius: 10px; color: #fff; }
+.btn-secondary { background: transparent; border: 1px dashed rgba(255,255,255,0.2); color: var(--muted) !important; width: 100%; padding: 9px; font-size: 11px; border-radius: 8px; }
 .btn-find { width: 100%; margin-bottom: 10px; background: #262c3d; font-size: 13px; }
-.btn-challenge { background: #b91c1c !important; font-size: 10px !important; padding: 4px 8px !important; }
+.btn-challenge { background: #b91c1c !important; font-size: 11px !important; padding: 6px 10px !important; }
+
 .action-danger { background: rgba(239, 68, 68, 0.15) !important; border-color: rgba(239, 68, 68, 0.4) !important; color: #f87171 !important; }
 .action-love { background: rgba(244, 114, 182, 0.15) !important; border-color: rgba(244, 114, 182, 0.4) !important; color: #f472b6 !important; }
 .action-married { background: rgba(251, 191, 36, 0.2) !important; border-color: var(--gold) !important; color: var(--gold) !important; }
 
-/* Взаимодействия прямо под карточкой персонажа */
-.npc-inline-actions {
-  background: #141722; border-top: 1px solid var(--card-border);
-  padding: 10px; margin-top: 8px; border-radius: 0 0 10px 10px;
-  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+/* ==========================================
+   КАРТОЧКИ ДЕЛ, СЛУЖБЫ И СОЦИАЛЬНЫХ СВЯЗЕЙ
+   ========================================== */
+.activity-card, .job-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card, .estate-card, .lang-card {
+  background: var(--card); border-radius: 13px; padding: 13px;
+  border: 1px solid var(--card-border); margin-bottom: 9px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
+.quest-card, .shop-item, .travel-card, .estate-card, .job-card, .lang-card {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+
+/* Красивое оформление карточки дела (как в службе) */
+.activity-card {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+.act-info { flex: 1; }
+.act-title-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 3px; }
+.act-name { font-size: 13px; font-weight: 700; color: #fff; }
+.act-age-badge {
+  font-size: 9px; background: #1e293b; color: #38bdf8;
+  padding: 2px 6px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); font-weight: 700;
+}
+.act-desc { font-size: 11px; color: var(--muted); margin-bottom: 4px; line-height: 1.4; }
+.act-req { font-size: 10px; color: var(--gold); font-weight: 600; }
+.act-btn { min-width: 90px; padding: 9px 12px; background: #312e81; font-size: 12px; }
+
+/* Социальные взаимодействия (внутри карточки NPC) */
+.npc-inline-actions {
+  background: #12151e; border-top: 1px solid var(--card-border);
+  padding: 11px; margin-top: 9px; border-radius: 0 0 10px 10px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+}
+.npc-action-full { grid-column: span 2; }
+
+/* Модалки рождения, событий, битв */
 .birth-sheet, .event-sheet, .battle-sheet {
   background: var(--card); border: 1px solid var(--card-border);
-  border-radius: 20px; padding: 20px; max-width: 460px; margin: auto; text-align: center;
+  border-radius: 20px; padding: 20px; max-width: 480px; margin: auto; text-align: center;
 }
 .birth-card { background: #1a1e29; border: 1px solid var(--card-border); border-radius: 14px; padding: 14px; margin-top: 10px; text-align: left; font-size: 12px; line-height: 1.6; }
 .event-icon { font-size: 40px; margin-bottom: 8px; }
 .event-title { font-size: 18px; font-weight: 800; color: #fff; margin-bottom: 6px; }
-.event-desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.4; }
+.event-desc { font-size: 13px; color: var(--muted); margin-bottom: 18px; line-height: 1.45; }
 .event-choices { display: flex; flex-direction: column; gap: 8px; }
 .event-choice-btn { width: 100%; padding: 12px; text-align: center; font-size: 13px; background: #232734; border-radius: 10px; border: 1px solid var(--card-border); }
 
+/* Битва */
 .battle-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 700; }
-.battle-log { height: 110px; background: #0f1117; border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 12px; margin: 12px 0; border: 1px solid var(--card-border); color: #d1d5db; }
+.battle-log { height: 110px; background: #0f1117; border-radius: 8px; padding: 10px; overflow-y: auto; font-size: 12px; margin: 12px 0; border: 1px solid var(--card-border); color: #d1d5db; line-height: 1.45; }
 .battle-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
+/* Снаряжение */
 .equip-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
 .equip-slot { background: #1c202c; border: 1px solid var(--card-border); border-radius: 10px; padding: 8px; text-align: center; cursor: pointer; }
-.slot-label { font-size: 10px; color: var(--muted); text-transform: uppercase; }
+.slot-label { font-size: 10px; color: var(--muted); text-transform: uppercase; font-weight: 600; }
 .slot-val { font-size: 12px; font-weight: 700; color: #fff; margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 /* Монумент Семи Сил */
@@ -188,21 +268,17 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 .power-rank { font-weight: 800; color: var(--gold); width: 25px; }
 .power-player { background: rgba(157, 78, 221, 0.15); border-radius: 6px; }
 
-/* Древо Династии и Зал Славы */
+/* Древо Рода */
 .tree-node {
   background: #171a24; border: 1px solid var(--card-border); border-radius: 12px;
-  padding: 10px; margin-bottom: 8px; position: relative;
+  padding: 11px; margin-bottom: 8px; position: relative;
 }
-.tree-node.current { border-color: var(--accent); background: #1f1b2e; }
-.tree-gen { font-size: 10px; color: var(--gold); font-weight: 800; text-transform: uppercase; }
+.tree-node.current { border-color: var(--accent); background: #1e192c; }
+.tree-gen { font-size: 10px; color: var(--gold); font-weight: 800; text-transform: uppercase; margin-bottom: 2px; }
 
-.section-title { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; margin: 14px 0 6px; }
-.activity-card, .relation-card, .school-card, .shop-item, .quest-card, .travel-card, .estate-card, .job-card, .politic-card {
-  background: var(--card); border-radius: 12px; padding: 12px;
-  border: 1px solid var(--card-border); margin-bottom: 8px;
-}
-.quest-card, .shop-item, .travel-card, .estate-card, .job-card, .politic-card { display: flex; justify-content: space-between; align-items: center; }
+.section-title { font-size: 11px; font-weight: 700; color: var(--accent-light); text-transform: uppercase; margin: 16px 0 7px; letter-spacing: 0.5px; }
 
+/* Нижнее меню */
 .bottom-nav {
   position: fixed; bottom: 0; left: 0; right: 0; height: 68px;
   padding-bottom: env(safe-area-inset-bottom, 10px);
@@ -217,4 +293,4 @@ button:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 }
 .nav-item .icon { font-size: 18px; }
 .nav-item.active { color: var(--accent-light) !important; }
-.nav-item.active .icon { transform: scale(1.15); filter: drop-shadow(0 0 6px rgba(157, 78, 221, 0.6)); }
+.nav-item.active .icon { transform: scale(1.15); filter: drop-shadow(0 0 6px var(--accent-glow)); }
