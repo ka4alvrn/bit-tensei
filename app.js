@@ -14,10 +14,6 @@ let currentShopCategory = "all";
 let creationGender = "male";
 let activeDungeon = null;
 
-// ------------------------------------------
-// 1. УНИВЕРСАЛЬНЫЕ ОКНА И ЛОГ
-// ------------------------------------------
-
 function showActionModal(title, text, icon = "⚡") {
   const modal = document.getElementById("action-modal");
   if (!modal) return;
@@ -46,10 +42,6 @@ function log(msg) {
   box.scrollTop = box.scrollHeight;
   tg?.HapticFeedback?.impactOccurred('light');
 }
-
-// ------------------------------------------
-// 2. ЗВУК И МУЗЫКА
-// ------------------------------------------
 
 function playSound(type) {
   if (!window.GameMusic || !GameMusic.isMusicOn()) return;
@@ -120,10 +112,6 @@ function toggleSound() {
   if (on) playSound("click");
 }
 
-// ------------------------------------------
-// 3. БОЕВАЯ МОЩЬ И ХАРАКТЕРИСТИКИ
-// ------------------------------------------
-
 function getReincarnationKarma() {
   return parseInt(localStorage.getItem("bit_tensei_karma") || "0", 10);
 }
@@ -159,9 +147,7 @@ function calcCombatPower(p) {
   if (p.demonEyes?.left) cp += p.demonEyes.left.cp || 0;
   if (p.demonEyes?.right) cp += p.demonEyes.right.cp || 0;
 
-  if (p.castleUpgrades && p.castleUpgrades.includes("trophy_hall")) {
-    cp += 3000;
-  }
+  if (p.castleUpgrades && p.castleUpgrades.includes("trophy_hall")) cp += 3000;
 
   if (p.injuries && p.injuries.length > 0) {
     p.injuries.forEach(inj => {
@@ -172,9 +158,7 @@ function calcCombatPower(p) {
   }
 
   const karma = getReincarnationKarma();
-  if (karma > 0) {
-    cp = Math.floor(cp * (1 + karma * 0.05));
-  }
+  if (karma > 0) cp = Math.floor(cp * (1 + karma * 0.05));
 
   const maxCap = (p.trait && p.trait.id === "god_mode") ? 999999999 : (GENERATION_CP_CAPS[p.generation] || 9999999);
   return Math.min(maxCap, Math.floor(cp));
@@ -184,9 +168,7 @@ function calcSquadCombatPower(p) {
   if (!p) return 0;
   let total = calcCombatPower(p);
   if (p.squad && p.squad.length > 0) {
-    p.squad.forEach(m => {
-      total += (m.cp || 500);
-    });
+    p.squad.forEach(m => { total += (m.cp || 500); });
   }
   return total;
 }
@@ -201,16 +183,10 @@ function calculateRank(exp, ranksList) {
   return ranksList[0];
 }
 
-// ------------------------------------------
-// 4. СОЗДАНИЕ ПЕРСОНАЖА (100% БЕЗОПАСНОСТЬ)
-// ------------------------------------------
-
 function setCreationGender(g) {
   creationGender = g;
-  const bM = document.getElementById("btn-gender-male");
-  const bF = document.getElementById("btn-gender-female");
-  if (bM) bM.classList.toggle("active", g === "male");
-  if (bF) bF.classList.toggle("active", g === "female");
+  document.getElementById("btn-gender-male")?.classList.toggle("active", g === "male");
+  document.getElementById("btn-gender-female")?.classList.toggle("active", g === "female");
   randomizeNameInputs();
   playSound("click");
 }
@@ -238,7 +214,6 @@ function onRegionChange() {
   const regKey = regSelect ? regSelect.value : "asura";
   const region = REGIONS[regKey] || REGIONS.asura;
 
-  // 1. Обновление ветвей происхождения
   const origSelect = document.getElementById("select-origin");
   if (origSelect) {
     origSelect.innerHTML = "";
@@ -250,7 +225,6 @@ function onRegionChange() {
     });
   }
 
-  // 2. Обновление сословий семьи (привязка к региону)
   const famSelect = document.getElementById("select-family-status");
   if (famSelect) {
     famSelect.innerHTML = "";
@@ -265,7 +239,6 @@ function onRegionChange() {
 }
 
 function showCreation() {
-  // Расы
   const raceSelect = document.getElementById("select-race");
   if (raceSelect) {
     raceSelect.innerHTML = "";
@@ -277,7 +250,6 @@ function showCreation() {
     }
   }
 
-  // Регионы
   const regSelect = document.getElementById("select-region");
   if (regSelect) {
     regSelect.innerHTML = "";
@@ -289,7 +261,6 @@ function showCreation() {
     }
   }
 
-  // Трейты (включая Мико и Чит-Режим Бога)
   const traitSelect = document.getElementById("select-trait");
   if (traitSelect) {
     traitSelect.innerHTML = "";
@@ -336,8 +307,7 @@ function confirmCreation() {
     if (overlay) overlay.style.display = "none";
     playSound("win");
   } catch (err) {
-    console.error("Ошибка при создании героя:", err);
-    alert("Произошел сбой создания. Сбрасываем к стандартным параметрам...");
+    console.error(err);
     initCharacter("Рудеус", "Грейрат", "male", RACES.human, "asura", REGIONS.asura.origins[0], TRAITS[0], REGION_FAMILY_STATUSES.asura[0], 0);
     const overlay = document.getElementById("creation-overlay");
     if (overlay) overlay.style.display = "none";
@@ -346,10 +316,8 @@ function confirmCreation() {
 
 function randomCreation() {
   creationGender = Math.random() > 0.5 ? "male" : "female";
-  const bM = document.getElementById("btn-gender-male");
-  const bF = document.getElementById("btn-gender-female");
-  if (bM) bM.classList.toggle("active", creationGender === "male");
-  if (bF) bF.classList.toggle("active", creationGender === "female");
+  document.getElementById("btn-gender-male")?.classList.toggle("active", creationGender === "male");
+  document.getElementById("btn-gender-female")?.classList.toggle("active", creationGender === "female");
   randomizeNameInputs();
 
   const raceKeys = Object.keys(RACES);
@@ -428,6 +396,8 @@ function initCharacter(fName, sName, gender, race, regionKey, origin, trait, fam
     castleUpgrades: [],
     lastCryptMeditationAge: -10,
     appointedHeirId: null,
+    discoveredSevenPowers: [],
+    currentPowersSeat: null,
     injuries: [],
     demonEyes: { left: null, right: null },
     languages: ["human"],
@@ -469,48 +439,12 @@ function initCharacter(fName, sName, gender, race, regionKey, origin, trait, fam
   showBirthModal();
 }
 
-function showBirthModal() {
-  const cap = (player.trait && player.trait.id === "god_mode") ? "Бесконечно" : (GENERATION_CP_CAPS[player.generation] || 9999999).toLocaleString();
-  const content = document.getElementById("birth-card-content");
-  if (content) {
-    content.innerHTML = `
-      <div>👶 Имя: <b>${player.name}</b> (${player.gender === 'male' ? '♂️ Мужчина' : '♀️ Женщина'}, Поколение ${player.generation})</div>
-      <div>🧬 Раса: <b>${player.race}</b> (Срок жизни: ~${player.maxAge} лет)</div>
-      <div>🏛️ Сословие семьи: <b>${player.familyStatus.name}</b></div>
-      <div>🏰 Регион: <b>${REGIONS[player.currentRegionKey].name}</b></div>
-      <div>👨‍👩‍👦 Родители: <b>${player.relations[0].name}</b> и <b>${player.relations[1].name}</b></div>
-      <div style="margin-top:6px; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;">
-        <div>🔮 Сосуд маны: <b style="color:var(--mana);">${player.maxMana}</b></div>
-        <div>❤️ Здоровье: <b style="color:var(--hp);">${player.hp} HP</b></div>
-        <div>⚡ Начальная Боевая Мощь: <b style="color:var(--accent-light);">${calcCombatPower(player).toLocaleString()}</b></div>
-        <div>🛑 Потолок силы ${player.generation}-го поколения: <b style="color:var(--gold);">${cap} БМ</b></div>
-      </div>
-    `;
-  }
-  const modal = document.getElementById("birth-modal");
-  if (modal) modal.style.display = "flex";
-}
-
-function closeBirthModal() {
-  const modal = document.getElementById("birth-modal");
-  if (modal) modal.style.display = "none";
-  playSound("click");
-}
-
-// ------------------------------------------
-// 5. ОСНОВНОЙ РЕНДЕР ИНТЕРФЕЙСА (БЕЗОПАСНЫЙ)
-// ------------------------------------------
-
 function renderUI() {
   if (!player) return;
 
   const setSafeText = (id, text) => {
     const el = document.getElementById(id);
     if (el) el.innerText = text;
-  };
-  const setSafeHtml = (id, html) => {
-    const el = document.getElementById(id);
-    if (el) el.innerHTML = html;
   };
 
   setSafeText("char-gender-icon", player.gender === "male" ? "♂️" : "♀️");
@@ -545,47 +479,44 @@ function renderUI() {
   setSafeText("char-guild-badge", player.age >= 10 ? `Ранг ${player.guildRank}` : "Гильдия: с 10 лет");
 
   let wRank = "Смертный";
-  if (cp >= 1000000) wRank = "Мировое Бедствие 💥";
+  if (player.currentPowersSeat) wRank = `#${player.currentPowersSeat} в Семи Силах 🏆`;
+  else if (cp >= 1000000) wRank = "Мировое Бедствие 💥";
   else if (cp >= 180000) wRank = "Уровень Семи Сил 🏆";
   else if (cp >= 40000)  wRank = "Герой Ранга S 🌟";
   else if (cp >= 10000)  wRank = "Мастер Святого Ранга 🗡️";
   else if (cp >= 1500)   wRank = "Опытный Мечник";
   setSafeText("char-world-rank", wRank);
 
-  // Живая молва бардов (работает даже соло)
-  let bardText = "О вас пока шепчутся лишь в узких кругах...";
-  if (cp >= 180000) bardText = "Живая легенда эпохи! Барды поют о вас при дворах всех шести континентов!";
-  else if (cp >= 40000) bardText = "Сказания о вашей несокрушимой мощи поют при королевском дворе Асуры!";
-  else if (cp >= 10000) bardText = "О вашем великом мастерстве клинка слагают баллады в лучших тавернах!";
-  else if (cp >= 1500) bardText = "Барды в тавернах поют о подающем надежды молодом воине!";
+  let bardText = "Младенец в колыбели, барды ещё не знают вашего имени...";
+  if (player.age <= 3) {
+    if (cp >= 2000) bardText = "Молва о рождении дитя с божественной аурой всколыхнула окрестности!";
+    else bardText = "Тихое рождение в колыбели, мать поет вам колыбельные песни...";
+  } else if (player.currentPowersSeat) {
+    bardText = `Легенда Шестиликого Мира! Владыка #${player.currentPowersSeat} Семи Великих Сил!`;
+  } else if (cp >= 180000) {
+    bardText = "Живая легенда эпохи! Барды поют о вас при дворах всех шести континентов!";
+  } else if (cp >= 40000) {
+    bardText = "Сказания о вашей несокрушимой мощи поют при королевском дворе Асуры!";
+  } else if (cp >= 10000) {
+    bardText = "О вашем великом мастерстве клинка слагают баллады в лучших тавернах!";
+  } else if (cp >= 1500) {
+    bardText = "Барды в тавернах поют о подающем надежды молодом воине!";
+  }
   setSafeText("bard-fame-text", bardText);
 
-  // Демонические глаза
   const eyeL = document.getElementById("eye-left");
   const eyeR = document.getElementById("eye-right");
   if (eyeL) {
-    if (player.demonEyes?.left) {
-      eyeL.className = "eye-slot active";
-      eyeL.innerText = player.demonEyes.left.name;
-    } else {
-      eyeL.className = "eye-slot";
-      eyeL.innerText = "👁️ Левый: Обычный";
-    }
+    eyeL.className = player.demonEyes?.left ? "eye-slot active" : "eye-slot";
+    eyeL.innerText = player.demonEyes?.left ? player.demonEyes.left.name : "👁️ Левый: Обычный";
   }
   if (eyeR) {
-    if (player.demonEyes?.right) {
-      eyeR.className = "eye-slot active";
-      eyeR.innerText = player.demonEyes.right.name;
-    } else {
-      eyeR.className = "eye-slot";
-      eyeR.innerText = "👁️ Правый: Обычный";
-    }
+    eyeR.className = player.demonEyes?.right ? "eye-slot active" : "eye-slot";
+    eyeR.innerText = player.demonEyes?.right ? player.demonEyes.right.name : "👁️ Правый: Обычный";
   }
 
-  // Языки
   setSafeText("char-languages-text", (player.languages || ["human"]).map(l => LANGUAGES[l]?.name || l).join(", "));
 
-  // Регенерация HP от жилья
   let currentRegen = 5;
   if (player.familySeat) {
     const seatObj = ESTATES.find(e => e.id === player.familySeat);
@@ -601,7 +532,6 @@ function renderUI() {
   const manaBar = document.getElementById("mana-bar");
   if (manaBar) manaBar.style.width = Math.min(100, (player.mana / player.maxMana) * 100) + "%";
 
-  // Травмы
   const injBanner = document.getElementById("injuries-banner");
   if (injBanner) {
     if (player.injuries && player.injuries.length > 0) {
@@ -612,7 +542,6 @@ function renderUI() {
     }
   }
 
-  // Резиденция
   const resBadge = document.getElementById("estate-residence-badge");
   if (resBadge) {
     if (player.familySeat) {
@@ -623,7 +552,15 @@ function renderUI() {
     }
   }
 
-  // Работа (законная и теневая)
+  const powersSeatBadge = document.getElementById("powers-seat-badge");
+  if (powersSeatBadge) {
+    if (player.currentPowersSeat) {
+      powersSeatBadge.innerHTML = `<span style="font-size:10px; background:#4c0519; border:1px solid #f43f5e; color:#fecdd3; padding:2px 6px; border-radius:4px;">🏆 Владыка #${player.currentPowersSeat} Семи Сил</span>`;
+    } else {
+      powersSeatBadge.innerHTML = "";
+    }
+  }
+
   const jobBox = document.getElementById("job-badge-container");
   if (jobBox) {
     let jobHtml = "";
@@ -641,7 +578,6 @@ function renderUI() {
     jobBox.innerHTML = jobHtml;
   }
 
-  // Дворянский титул
   const polBox = document.getElementById("politics-badge-container");
   if (polBox) {
     const titleObj = ASURA_POLITICS.nobilityTitles.find(t => t.id === player.nobilityTitle) || ASURA_POLITICS.nobilityTitles[0];
@@ -652,7 +588,6 @@ function renderUI() {
     polBox.innerHTML = `<span style="font-size:10px; background:#2e1065; border:1px solid #a855f7; color:#e9d5ff; padding:2px 6px; border-radius:4px;">👑 Титул: ${titleObj.name} • ${factionName} (Влияние: ${player.asuraInfluence})</span>`;
   }
 
-  // Катаклизм
   const calBanner = document.getElementById("calamity-status-banner");
   if (calBanner) {
     const lostFamily = (player.relations || []).filter(r => r.isLost);
@@ -676,6 +611,8 @@ function renderUI() {
   setSafeText("slot-accessory", player.equipment?.accessory ? player.equipment.accessory.name : "Нет");
 
   renderLifeStorySection();
+  renderSevenPowersQuest();
+  renderVoidHitogamiSection();
 }
 
 function updateUI() {
@@ -696,7 +633,7 @@ function switchTab(tabId) {
 
   if (tabId === 'activities') renderActivities();
   if (tabId === 'inventory') { renderInventoryTab(); renderFamilyCastle(); renderTestament(); renderCaravans(); renderEstates(); }
-  if (tabId === 'guild') { renderGuildTab(); renderSquad(); }
+  if (tabId === 'guild') { renderGuildTab(); renderSquad(); renderSevenPowersQuest(); renderVoidHitogamiSection(); }
   if (tabId === 'relations') { renderRelations(); renderChaosBreaker(); renderGreyratBranches(); renderTablets(); renderLanguages(); }
   playSound("click");
 }
@@ -725,17 +662,12 @@ function setWorldSubTab(sub, btnEl) {
   playSound("click");
 }
 
-// ------------------------------------------
-// 6. СЮЖЕТНЫЕ ВЕХИ
-// ------------------------------------------
-
 function renderLifeStorySection() {
   const container = document.getElementById("life-story-container");
   const badge = document.getElementById("story-notify-badge");
   if (!container) return;
 
   const availableStories = STORY_ACTIVITIES.filter(s => player.age >= s.age && !player.storyCompleted.includes(s.id));
-  
   if (badge) badge.style.display = (availableStories.length > 0) ? "inline-block" : "none";
 
   container.innerHTML = "";
@@ -779,10 +711,6 @@ function performStoryActivity(storyId) {
   updateUI();
 }
 
-// ------------------------------------------
-// 7. ДЕЛА, СЛУЖБА И ТЕНЕВОЕ ПОДПОЛЬЕ
-// ------------------------------------------
-
 function setActivityCategory(cat, btnEl) {
   currentActivityCategory = cat;
   document.querySelectorAll('.sub-tab-btn').forEach(b => b.classList.remove('active'));
@@ -811,7 +739,7 @@ function renderActivities() {
   }
 
   if (list.length === 0) {
-    container.innerHTML = `<div style="color:var(--muted); text-align:center; padding:20px;">Нет доступных дел в этой категории. Переключите фильтр!</div>`;
+    container.innerHTML = `<div style="color:var(--muted); text-align:center; padding:20px;">Нет доступных дел в этой категории для вашего возраста (${player.age} лет). Переключите фильтр!</div>`;
     return;
   }
 
@@ -883,7 +811,7 @@ function renderJobMarket(container) {
     card.style.background = "#131b2e";
     card.style.borderColor = "#38bdf8";
     card.innerHTML = `
-      <b style="color:#38bdf8; font-size:14px;">💼 Ваша законная служба: ${jData.name}</b>
+      <b style="color:#38bdf8; font-size:14px;">💼 Ваша служба Короне: ${jData.name}</b>
       <div style="font-size:12px; color:#fff; margin-top:4px;">Текущий чин: <b>${curRank.title}</b></div>
       <div style="font-size:11px; color:var(--muted);">${curRank.desc}</div>
       <div style="font-size:11px; color:var(--gold); margin-top:4px;">Жалование: <b>+${curRank.salary} 🪙/год</b></div>
@@ -894,7 +822,7 @@ function renderJobMarket(container) {
           <div style="font-size:10px; color:var(--muted);">Требования: с ${nextRank.minAge} лет ${nextRank.minSword ? `• Меч ${nextRank.minSword}+` : ''} ${nextRank.minMagic ? `• Магия ${nextRank.minMagic}+` : ''} ${nextRank.minInt ? `• Знания ${nextRank.minInt}+` : ''}</div>
           <button style="margin-top:6px; width:100%; background:#2563eb;" onclick="tryJobPromotion()">🎖️ Добиться повышения в чине</button>
         </div>
-      ` : '<div style="color:var(--gold); font-size:11px; margin-top:6px;">🌟 Вы достигли вершины карьеры!</div>'}
+      ` : '<div style="color:var(--gold); font-size:11px; margin-top:6px;">🌟 Вы достигли вершины государственной службы!</div>'}
 
       <button class="action-danger" style="margin-top:8px; width:100%; font-size:11px;" onclick="quitJob()">Подать в отставку</button>
     `;
@@ -903,11 +831,6 @@ function renderJobMarket(container) {
   }
 
   container.innerHTML += `<div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Законные службы региона (${REGIONS[player.currentRegionKey]?.name || 'Провинция'}):</div>`;
-
-  if (currentJobsInRegion.length === 0) {
-    container.innerHTML += `<div style="color:var(--muted); padding:10px;">В этой провинции нет открытых вакансий Короны.</div>`;
-    return;
-  }
 
   currentJobsInRegion.forEach(jb => {
     const firstRank = jb.ranks[0];
@@ -939,7 +862,7 @@ function applyForJob(jobId) {
   const msg = `Вы приняты на службу: <b>${jData.name}</b> в чине «${jData.ranks[0].title}»!`;
   log(msg);
   playSound("win");
-  showActionModal("Поступление на службу", msg, "💼");
+  showActionModal("Служба Короны", msg, "💼");
   updateUI();
   renderActivities();
 }
@@ -977,11 +900,10 @@ function quitJob() {
   renderActivities();
 }
 
-// Теневое подполье
 function renderUndergroundMarket(container) {
   const uJob = UNDERGROUND_JOBS[player.currentRegionKey];
   if (!uJob) {
-    container.innerHTML = `<div style="color:var(--muted); padding:10px;">В этом регионе нет организованного синдиката.</div>`;
+    container.innerHTML = `<div style="color:var(--muted); padding:10px;">В этом регионе нет теневого синдиката.</div>`;
     return;
   }
 
@@ -997,7 +919,7 @@ function renderUndergroundMarket(container) {
       <b style="color:#f87171; font-size:14px;">🗡️ Теневое Подполье: ${uJob.name}</b>
       <div style="font-size:12px; color:#fff; margin-top:4px;">Ваша роль: <b>${curRank.title}</b></div>
       <div style="font-size:11px; color:var(--muted);">${curRank.desc}</div>
-      <div style="font-size:11px; color:var(--gold); margin-top:4px;">Теневой куш: <b>+${curRank.salary} 🪙/год</b> • Риск ареста: <b>${Math.round(curRank.risk * 100)}%</b></div>
+      <div style="font-size:11px; color:var(--gold); margin-top:4px;">Теневой куш: <b>+${curRank.salary} 🪙/год</b> • Риск облавы: <b>${Math.round(curRank.risk * 100)}%</b></div>
 
       ${nextRank ? `
         <div style="margin-top:10px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
@@ -1006,7 +928,7 @@ function renderUndergroundMarket(container) {
         </div>
       ` : '<div style="color:var(--gold); font-size:11px; margin-top:6px;">👑 Вы — теневой владыка преступного мира провинции!</div>'}
 
-      <button class="action-danger" style="margin-top:8px; width:100%; font-size:11px;" onclick="quitUndergroundJob()">Залечь на дно (Покинуть синдикат)</button>
+      <button class="action-danger" style="margin-top:8px; width:100%; font-size:11px;" onclick="quitUndergroundJob()">Залечь на дно</button>
     `;
     container.appendChild(card);
     return;
@@ -1037,7 +959,7 @@ function applyForUndergroundJob() {
   const uJob = UNDERGROUND_JOBS[player.currentRegionKey];
   player.currentUndergroundJob = uJob.id;
   player.undergroundRankIndex = 0;
-  const msg = `Вы примкнули к криминалу: <b>${uJob.name}</b> как «${uJob.ranks[0].title}»! Берегитесь облав стражи!`;
+  const msg = `Вы примкнули к банде: <b>${uJob.name}</b> как «${uJob.ranks[0].title}»! Берегитесь облав стражи!`;
   log(msg);
   playSound("death");
   showActionModal("Криминальное подполье", msg, "🗡️");
@@ -1057,12 +979,12 @@ function tryUndergroundPromotion() {
 
   if (meetsAge && meetsNorth && meetsSword && meetsMagic) {
     player.undergroundRankIndex++;
-    const msg = `💀 <b>АВТОРИТЕТ В ПОДПОЛЬЕ ВЫРОС!</b> Ваша новая роль: <b>${nextRank.title}</b>! Годовой куш: +${nextRank.salary}🪙!`;
+    const msg = `💀 <b>АВТОРИТЕТ ВЫРОС!</b> Ваша новая роль: <b>${nextRank.title}</b>! Годовой куш: +${nextRank.salary}🪙!`;
     log(msg);
     playSound("win");
     showActionModal("Власть в Синдикате", msg, "💀");
   } else {
-    showActionModal("Отказ", "Главари банды считают, что у вас недостаточно боевого или воровского опыта!", "❌");
+    showActionModal("Отказ", "Главари считают, что у вас недостаточно боевого опыта!", "❌");
   }
   updateUI();
   renderActivities();
@@ -1071,16 +993,12 @@ function tryUndergroundPromotion() {
 function quitUndergroundJob() {
   player.currentUndergroundJob = null;
   player.undergroundRankIndex = 0;
-  log("Вы порвали связи с теневым синдикатом и залегли на дно.");
+  log("Вы порвали связи с теневым синдикатом.");
   playSound("click");
   showActionModal("Залечь на дно", "Вы покинули преступную организацию.", "🕶️");
   updateUI();
   renderActivities();
 }
-
-// ------------------------------------------
-// 8. ЗАВЕЩАНИЕ, ЗАМОК, КАРАВАНЫ И ПРОДАЖА
-// ------------------------------------------
 
 function renderTestament() {
   const container = document.getElementById("testament-container");
@@ -1094,20 +1012,20 @@ function renderTestament() {
     <div class="testament-card" style="background:#1b1828; border-color:#c084fc;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <b style="color:#e9d5ff; font-size:13px;">📜 Фамильное Завещание Династии</b>
-        <span class="badge-legendary">${heir ? 'Наследник: ' + heir.name : 'Наследник не назначен'}</span>
+        <span class="badge-legendary">${heir ? 'Наследник: ' + heir.name : 'Не назначен'}</span>
       </div>
       <div style="font-size:11px; color:var(--muted); margin:4px 0;">
-        Назначенный наследник после вашей смерти получит <b>100% семейного золота без потерь</b>, все замки, поместья и статус рода!
+        Официальный наследник получит <b>100% семейной казны без налога</b>, все замки, имения и родовую славу!
       </div>
 
       ${children.length > 0 ? `
         <div style="margin-top:8px;">
-          <label style="font-size:10px;">Выберите официального наследника престола рода:</label>
+          <label style="font-size:10px;">Назначить официального преемника престола рода:</label>
           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:4px;">
             ${children.map(c => {
               const isAppointed = (player.appointedHeirId === c.id);
               return `<button style="font-size:10px; padding:5px 8px; background:${isAppointed ? '#059669' : '#312e81'};" onclick="appointTestamentHeir('${c.id}')">
-                ${isAppointed ? '👑 Главный наследник: ' + c.name : 'Назначить: ' + c.name}
+                ${isAppointed ? '👑 Наследник: ' + c.name : 'Назначить: ' + c.name}
               </button>`;
             }).join("")}
           </div>
@@ -1134,7 +1052,7 @@ function renderFamilyCastle() {
   container.innerHTML = "";
 
   if (!player.estates || player.estates.length === 0) {
-    container.innerHTML = `<div style="font-size:11px; color:var(--muted); padding:6px;">Купите недвижимость ниже, чтобы сделать её Фамильным Замком!</div>`;
+    container.innerHTML = `<div style="font-size:11px; color:var(--muted); padding:6px;">Купите имение ниже, чтобы сделать его Фамильным Замком!</div>`;
     return;
   }
 
@@ -1240,7 +1158,7 @@ function meditateInCrypt() {
   player.mana = player.maxMana;
   player.swordGodExp += 25;
   player.magicExp += 25;
-  const msg = `Вы преклонили колени перед саркофагами славных предков династии ${player.surname}. Духи прошлого благословили ваш разум (+25 к Мечу и Магии, полное восстановление HP и Маны)!`;
+  const msg = `Вы преклонили колени перед саркофагами предков династии ${player.surname}. Духи прошлого благословили ваш клинок и разум (+25 к Мечу и Магии, полное восстановление сил)!`;
   log(msg);
   playSound("magic");
   showActionModal("Благословение Предков", msg, "🕯️");
@@ -1349,7 +1267,6 @@ function buyEstate(estateId) {
   renderFamilyCastle();
 }
 
-// Рюкзак с возможностью ПРОДАЖИ ненужного снаряжения (50% цены)
 function renderInventoryTab() {
   const invCont = document.getElementById("inventory-list");
   if (!invCont) return;
@@ -1504,10 +1421,6 @@ function usePotionOutOfCombat() {
   renderInventoryTab();
 }
 
-// ------------------------------------------
-// 9. ЛАБИРИНТЫ
-// ------------------------------------------
-
 function renderGuildTab() {
   const gTag = document.getElementById("guild-status-tag");
   if (gTag) gTag.innerText = `Ранг: ${player.guildRank}`;
@@ -1517,6 +1430,8 @@ function renderGuildTab() {
   if (gExpText) gExpText.innerText = `${player.guildExp} / ${nextReq} GP`;
 
   renderPowersMonument();
+  renderSevenPowersQuest();
+  renderVoidHitogamiSection();
 
   const dungCont = document.getElementById("dungeon-container");
   if (!dungCont) return;
@@ -1715,849 +1630,13 @@ function closeDungeonModal() {
   renderGuildTab();
 }
 
-// ------------------------------------------
-// 10. ХАОС БРЕЙКЕР, ГРЕЙРАТЫ И СКРИЖАЛИ
-// ------------------------------------------
-
-function renderChaosBreaker() {
-  const container = document.getElementById("perugius-container");
-  if (!container) return;
-  container.innerHTML = "";
-
-  const myCp = calcCombatPower(player);
-
-  container.innerHTML += `
-    <div class="card" style="background:#1e1a2f; border-color:#eab308; margin-bottom:10px;">
-      <b style="color:#fde047; font-size:13px;">🐉 Дрейфующая Цитадель Хаос Брейкер</b>
-      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
-        Обитель Короля-Дракона Перугиуса Долы. Доступна героям с высоким признанием.
-      </div>
-    </div>
-  `;
-
-  PERUGIUS_TRIALS.forEach(tr => {
-    const passed = player.perugiusTrials && player.perugiusTrials.includes(tr.rank);
-    const card = document.createElement("div");
-    card.className = "card";
-    card.style.marginBottom = "8px";
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <b style="color:#fff;">#${tr.rank} ${tr.name}</b>
-        <span class="badge-legendary">${passed ? 'Пройдено ✓' : 'Требует: ' + tr.reqCp.toLocaleString() + ' БМ'}</span>
-      </div>
-      <div style="font-size:11px; color:var(--muted); margin:4px 0;">Награда: ${tr.rewardText}</div>
-      <button ${passed || myCp < tr.reqCp ? 'disabled' : ''} style="background:${passed ? '#059669' : '#eab308'}; color:${passed ? '#fff' : '#000'} !important; width:100%; margin-top:4px;" onclick="attemptPerugiusTrial(${tr.rank})">
-        ${passed ? '✓ Испытание зачтено' : myCp < tr.reqCp ? 'Недостаточно боевой мощи' : 'Бросить вызов стражу'}
-      </button>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function attemptPerugiusTrial(rank) {
-  const tr = PERUGIUS_TRIALS.find(t => t.rank === rank);
-  player.perugiusTrials = player.perugiusTrials || [];
-  player.perugiusTrials.push(rank);
-
-  if (rank === 3) {
-    player.coins += 5000;
-    player.trait = TRAITS.find(t => t.id === "laplace_factor") || player.trait;
-  }
-
-  const msg = `👑 <b>ВЫСШИЙ ТРИУМФ В ХАОС БРЕЙКЕРЕ!</b> Вы одолели стража #${rank} Перугиуса! Получено: ${tr.rewardText}!`;
-  log(msg);
-  playSound("win");
-  showActionModal("Испытание Перугиуса", msg, "🐉");
-  updateUI();
-  renderChaosBreaker();
-}
-
-function renderGreyratBranches() {
-  const container = document.getElementById("greyrat-branches-container");
-  if (!container) return;
-  container.innerHTML = "";
-
-  container.innerHTML += `
-    <div class="card" style="background:#20141a; border-color:#ef4444; margin-bottom:10px;">
-      <b style="color:#fca5a5; font-size:13px;">🩸 Кровная Вражда Великого Дома Грейрат</b>
-      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
-        Четыре ветви ведут скрытую войну за единовластие над королевством Асура.
-      </div>
-    </div>
-  `;
-
-  GREYRAT_BRANCHES.forEach(b => {
-    const isAllied = player.greyratAllies && player.greyratAllies.includes(b.id);
-    const card = document.createElement("div");
-    card.className = "card";
-    card.style.marginBottom = "8px";
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <b style="color:#fff;">${b.name}</b>
-        <span class="badge-mythic">${isAllied ? 'В союзе ✓' : b.region}</span>
-      </div>
-      <div style="font-size:11px; color:var(--muted); margin:4px 0;">Глава ветви: <b>${b.leader}</b> • ${b.desc}</div>
-      <button ${isAllied ? 'disabled' : ''} style="background:${isAllied ? '#059669' : '#b91c1c'}; width:100%; margin-top:4px;" onclick="negotiateGreyratBranch('${b.id}')">
-        ${isAllied ? 'Союз заключен' : 'Отправить послов (Заключить пакт крови) (⚡ 1 сила)'}
-      </button>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function negotiateGreyratBranch(branchId) {
-  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
-  player.ap -= 1;
-  player.greyratAllies = player.greyratAllies || [];
-
-  const b = GREYRAT_BRANCHES.find(x => x.id === branchId);
-  if (player.asuraInfluence >= 30 || player.swordGodExp >= 80 || calcCombatPower(player) > 10000) {
-    player.greyratAllies.push(branchId);
-    player.asuraInfluence += 25;
-    const msg = `Вы заключили династический пакт с <b>${b.name}</b>! Авторитет дома Грейрат объединен (+25 влияния)!`;
-    log(msg);
-    playSound("win");
-    showActionModal("Династический Союз", msg, "🩸");
-  } else {
-    const msg = `Послы ${b.name} надменно отвергли предложение: ваш статус пока недостаточно велик.`;
-    log(msg);
-    playSound("click");
-    showActionModal("Отказ послов", msg, "📜");
-  }
-  updateUI();
-  renderGreyratBranches();
-}
-
-function renderTablets() {
-  const container = document.getElementById("tablets-container");
-  if (!container) return;
-  container.innerHTML = "";
-
-  player.tabletsDeciphered = player.tabletsDeciphered || [];
-
-  container.innerHTML += `
-    <div class="card" style="background:#151c28; border-color:#38bdf8; margin-bottom:10px;">
-      <b style="color:#38bdf8; font-size:13px;">📜 Археология: Расшифровано ${player.tabletsDeciphered.length}/5 Скрижалей</b>
-      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
-        Соберите древнюю истину Первой Войны для открытия священного заклинания.
-      </div>
-    </div>
-  `;
-
-  FIRST_WAR_TABLETS.forEach(t => {
-    const isDone = player.tabletsDeciphered.includes(t.id);
-    const knowsLang = player.languages && player.languages.includes(t.reqLang);
-    const inRegion = player.currentRegionKey === t.regionKey;
-    const canDecipher = !isDone && knowsLang && inRegion;
-
-    const card = document.createElement("div");
-    card.className = "tablet-card";
-    card.innerHTML = `
-      <div>
-        <b style="color:#fff;">${t.name}</b> ${isDone ? '<span style="color:var(--green); font-size:11px;">(Расшифровано ✓)</span>' : ''}
-        <div style="font-size:11px; color:var(--muted);">${t.desc}</div>
-        <div style="font-size:10px; color:var(--accent-light);">Язык: ${LANGUAGES[t.reqLang]?.name} • Регион: ${REGIONS[t.regionKey]?.name || 'Мир'}</div>
-      </div>
-      <button ${canDecipher ? '' : 'disabled'} style="background:${isDone ? '#059669' : '#0284c7'};" onclick="decipherTablet('${t.id}')">
-        ${isDone ? 'Готово' : !knowsLang ? 'Не знаете языка' : !inRegion ? 'Прибудьте в регион' : 'Расшифровать'}
-      </button>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function decipherTablet(tabletId) {
-  player.tabletsDeciphered = player.tabletsDeciphered || [];
-  player.tabletsDeciphered.push(tabletId);
-  player.intellect += 20;
-  player.maxMana += 30;
-
-  const t = FIRST_WAR_TABLETS.find(x => x.id === tabletId);
-  let msg = `Вы перевели древние символы на «${t.name}» (+20 к Знаниям, +30 макс. маны)!`;
-
-  if (player.tabletsDeciphered.length === 5) {
-    player.maxMana += 200;
-    player.magicExp += 200;
-    msg += `<br><br>🌟 <b>ВЕЛИКОЕ ОТКРЫТИЕ!</b> Вы расшифровали все 5 скрижалей Первой Войны! Открыто Священное Заклинание Изначального Бога (+200 ко всем школам магии)!`;
-    playSound("win");
-  } else {
-    playSound("magic");
-  }
-
-  log(msg);
-  showActionModal("Расшифровка Скрижали", msg, "📜");
-  updateUI();
-  renderTablets();
-}
-
-function renderLanguages() {
-  const container = document.getElementById("languages-container");
-  if (!container) return;
-  container.innerHTML = "";
-
-  player.languages = player.languages || ["human"];
-
-  for (let lKey in LANGUAGES) {
-    const lObj = LANGUAGES[lKey];
-    const isKnown = player.languages.includes(lKey);
-    const card = document.createElement("div");
-    card.className = "lang-card";
-    card.innerHTML = `
-      <div>
-        <b style="color:#fff;">${lObj.name}</b> ${isKnown ? '<span style="color:var(--green); font-size:11px;">(Изучено ✓)</span>' : ''}
-        <div style="font-size:11px; color:var(--muted);">${lObj.desc}</div>
-      </div>
-      <button ${isKnown ? 'disabled' : ''} style="background:${isKnown ? '#059669' : '#312e81'};" onclick="learnLanguage('${lKey}')">
-        ${isKnown ? 'Изучено' : 'Учить язык (60🪙, ⚡ 1 сила)'}
-      </button>
-    `;
-    container.appendChild(card);
-  }
-}
-
-function learnLanguage(langKey) {
-  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
-  if (player.coins < 60) { showActionModal("Нехватка золота", "Нужно 60 монет на словари!", "🪙"); return; }
-
-  player.ap -= 1;
-  player.coins -= 60;
-  player.languages = player.languages || ["human"];
-  player.languages.push(langKey);
-  player.intellect += 8;
-
-  const l = LANGUAGES[langKey];
-  const msg = `Вы овладели наречием: <b>${l.name}</b> (+8 к Знаниям)!`;
-  log(msg);
-  playSound("win");
-  showActionModal("Изучение Языка", msg, "🗣️");
-  updateUI();
-  renderLanguages();
-}
-
-// ------------------------------------------
-// 11. СОЦИАЛЬНЫЕ ДЕЙСТВИЯ, СТАРЕНИЕ И СМЕРТЬ NPC
-// ------------------------------------------
-
-function toggleNpcActions(npcId) {
-  currentOpenedNpcId = (currentOpenedNpcId === npcId) ? null : npcId;
-  renderRelations();
-}
-
-function renderRelations() {
-  const container = document.getElementById("relations-list");
-  if (!container) return;
-  container.innerHTML = "";
-  if (!player || !player.relations) return;
-
-  player.relations.forEach(npc => {
-    let statusClass = "status-friend";
-    if (npc.isDead) statusClass = "status-dead";
-    else if (npc.relation < 30) statusClass = "status-enemy";
-    else if (npc.status === "Супруг/Супруга") statusClass = "status-married";
-    else if (npc.status === "Пара") statusClass = "status-love";
-
-    const isOpened = (currentOpenedNpcId === npc.id);
-    const inSquad = player.squad && player.squad.some(m => m.id === npc.id);
-
-    const card = document.createElement("div");
-    card.className = "relation-card";
-    card.innerHTML = `
-      <div class="rel-header" onclick="${npc.isDead ? '' : `toggleNpcActions('${npc.id}')`}" style="cursor:${npc.isDead ? 'default' : 'pointer'};">
-        <div>
-          <div class="rel-name">
-            ${npc.name}
-            ${npc.isCanon ? '<span class="badge-canon">Канон ⭐</span>' : ''}
-            ${npc.isChild ? '<span style="color:#fbbf24; font-size:11px;">(Наследник 👶)</span>' : ''}
-            ${npc.isLost ? '<span class="badge-mythic" style="font-size:10px;">Пропал в Катаклизме ⚡</span>' : ''}
-            ${npc.isDead ? '<span class="status-dead" style="font-size:11px;">(Покойный ✝)</span>' : ''}
-            ${inSquad ? '<span class="badge-rare">В отряде 🛡️</span>' : ''}
-          </div>
-          <div class="rel-role">${npc.role || npc.race} • Возраст: <b>${npc.age || 20} лет</b> • БМ: <b>${(npc.cp || 500).toLocaleString()}</b></div>
-        </div>
-        <div style="text-align:right;">
-          <div style="font-size:13px; font-weight:700;"><span class="${statusClass}">${npc.status}</span> ${npc.isDead ? '' : `(${npc.relation}%)`}</div>
-          ${!npc.isDead ? `<div style="font-size:10px; color:var(--accent);">${isOpened ? '▲ Свернуть' : '▼ Взаимодействовать'}</div>` : ''}
-        </div>
-      </div>
-      ${!npc.isDead ? `
-        <div class="bar-bg" onclick="toggleNpcActions('${npc.id}')" style="cursor:pointer;">
-          <div class="bar-fill bar-relation" style="width: ${Math.max(0, Math.min(100, npc.relation))}%; background: ${npc.relation < 30 ? 'var(--hp)' : 'var(--green)'};"></div>
-        </div>
-      ` : ''}
-
-      ${isOpened && !npc.isDead ? `
-        <div class="npc-inline-actions">
-          ${npc.isLost ? `
-            <button class="npc-action-full" style="background:#b45309;" onclick="searchLostFamily('${npc.id}')">🔍 Отправиться на поиски по континентам (⚡ 1 сила)</button>
-          ` : `
-            <button onclick="actionTalk('${npc.id}')">💬 Побеседовать</button>
-            <button onclick="actionGift('${npc.id}')">🎁 Подарок (15🪙)</button>
-            <button onclick="actionTavernDrink('${npc.id}')">🍻 Выпить в таверне (12🪙)</button>
-            <button onclick="actionSparring('${npc.id}')">⚔️ Спарринг мечей</button>
-            <button onclick="actionBorrowGold('${npc.id}')">🪙 Занять монет</button>
-            <button class="action-danger" onclick="actionInsult('${npc.id}')">🤬 Оскорбить</button>
-
-            ${!inSquad && player.age >= 10 && !npc.isChild ? `
-              <button class="npc-action-full" style="background:#312e81;" onclick="addToSquad('${npc.id}')">🛡️ Пригласить в боевой отряд</button>
-            ` : ''}
-
-            ${!npc.isFamily && !npc.isChild && player.age >= 14 && npc.status !== "Пара" && npc.status !== "Супруг/Супруга" ? `
-              <button class="action-love npc-action-full" onclick="actionConfess('${npc.id}')">❤️ Признаться в чувствах</button>
-            ` : ''}
-
-            ${!npc.isFamily && !npc.isChild && player.age >= 16 && npc.status === "Пара" && !player.spouse ? `
-              <button class="action-married npc-action-full" onclick="actionMarry('${npc.id}')">💍 Сделать предложение руки и сердца</button>
-            ` : ''}
-
-            ${npc.status === "Супруг/Супруга" && player.age >= 16 ? `
-              <button class="action-married npc-action-full" ${player.pregnancy ? 'disabled' : ''} onclick="actionHaveChild('${npc.id}')">
-                ${player.pregnancy ? '⏳ Ребенок родится через год' : '👶 Зачать ребенка (Родится через 1 год)'}
-              </button>
-            ` : ''}
-          `}
-        </div>
-      ` : ''}
-    `;
-    container.appendChild(card);
-  });
-}
-
-function actionTavernDrink(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  if (player.coins < 12) { showActionModal("Нехватка монет", "Нужно 12 монет на эль!", "🪙"); return; }
-
-  player.coins -= 12;
-  npc.relation = Math.min(100, npc.relation + 14);
-  const msg = `Вы провели вечер в таверне за кружкой доброго эля вместе с <b>${npc.name}</b> (+14% отношений)!`;
-  log(msg);
-  playSound("coin");
-  showActionModal("Вечер в таверне", msg, "🍻");
-  updateUI();
-  renderRelations();
-}
-
-function actionSparring(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-
-  player.swordGodExp += 10;
-  npc.cp = (npc.cp || 500) + 150;
-  const msg = `Вы провели дружеский спарринг на тренировочных мечах с <b>${npc.name}</b> (+10 к Мечу обоим)!`;
-  log(msg);
-  playSound("sword");
-  showActionModal("Спарринг", msg, "⚔️");
-  updateUI();
-  renderRelations();
-}
-
-function actionBorrowGold(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-
-  if (npc.relation >= 75) {
-    let loan = Math.floor(Math.random() * 40) + 20;
-    player.coins += loan;
-    npc.relation -= 5;
-    const msg = `<b>${npc.name}</b> выручил(а) вас золотом из своих сбережений (+${loan} монет)!`;
-    log(msg);
-    playSound("coin");
-    showActionModal("Займ золота", msg, "🪙");
-  } else {
-    showActionModal("Отказ", `${npc.name} пока недостаточно доверяет вам для займов (нужно 75%+ отношений).`, "❌");
-  }
-  updateUI();
-  renderRelations();
-}
-
-function actionTalk(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  npc.relation = Math.min(100, npc.relation + 8);
-  if (npc.relation >= 60 && npc.status === "Знакомый") npc.status = "Друг";
-  const msg = `Вы побеседовали с <b>${npc.name}</b> (+8% отношений).`;
-  log(msg);
-  playSound("click");
-  showActionModal("Беседа", msg, "💬");
-  updateUI();
-  renderRelations();
-}
-
-function actionGift(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  if (player.coins < 15) { showActionModal("Нехватка монет", "Нужно 15 монет!", "🪙"); return; }
-  player.coins -= 15;
-  npc.relation = Math.min(100, npc.relation + 20);
-  const msg = `Вы преподнесли ценный подарок для <b>${npc.name}</b> (+20%)!`;
-  log(msg);
-  playSound("coin");
-  showActionModal("Подарок", msg, "🎁");
-  updateUI();
-  renderRelations();
-}
-
-function actionInsult(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  npc.relation = Math.max(0, npc.relation - 30);
-  if (npc.relation <= 25) npc.status = "Заклятый враг";
-  const msg = `Вы жестоко оскорбили <b>${npc.name}</b>. Отношения испорчены!`;
-  log(msg);
-  playSound("click");
-  showActionModal("Ссора", msg, "🤬");
-  updateUI();
-  renderRelations();
-}
-
-function actionConfess(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  if (npc.relation >= 75) {
-    npc.status = "Пара";
-    const msg = `💖 <b>${npc.name}</b> ответила взаимностью на ваши чувства!`;
-    log(msg);
-    playSound("win");
-    showActionModal("Признание", msg, "💖");
-  } else {
-    npc.relation = Math.max(0, npc.relation - 10);
-    const msg = `💔 <b>${npc.name}</b>: "Давай пока останемся друзьями..."`;
-    log(msg);
-    playSound("click");
-    showActionModal("Отказ", msg, "💔");
-  }
-  updateUI();
-  renderRelations();
-}
-
-function actionMarry(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  if (npc.relation >= 88) {
-    npc.status = "Супруг/Супруга";
-    player.spouse = npc;
-    const msg = `💍 Колокола собора звонят! Вы и <b>${npc.name}</b> вступили в законный брак!`;
-    log(msg);
-    playSound("win");
-    showActionModal("Свадьба", msg, "💍");
-  } else {
-    showActionModal("Свадьба", `${npc.name} считает, что нужно еще лучше укрепить взаимное доверие.`, "💍");
-  }
-  updateUI();
-  renderRelations();
-}
-
-function actionHaveChild(npcId) {
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-  if (player.pregnancy) {
-    showActionModal("Беременность", "Беременность уже протекает! Ребенок появится через год.", "👶");
-    return;
-  }
-  player.pregnancy = { partnerName: npc.name };
-  const msg = `💖 Чудесная весть! Вы и <b>${npc.name}</b> ждете ребенка! Малыш появится на свет через 1 год.`;
-  log(msg);
-  playSound("win");
-  showActionModal("Пополнение", msg, "👶");
-  updateUI();
-  renderRelations();
-}
-
-function searchLostFamily(npcId) {
-  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
-  player.ap -= 1;
-
-  const npc = player.relations.find(r => r.id === npcId);
-  if (!npc) return;
-
-  if (Math.random() < 0.6) {
-    npc.isLost = false;
-    const msg = `🎉 <b>ПОИСКИ УВЕНЧАЛИСЬ УСПЕХОМ!</b> Вы нашли <b>${npc.name}</b> в одном из лагерей беженцев! Семья воссоединена!`;
-    log(msg);
-    playSound("win");
-    showActionModal("Воссоединение", msg, "🎉");
-  } else {
-    const msg = `Вы обошли таверны и лагеря, но вестей о <b>${npc.name}</b> пока нет. Продолжайте поиски!`;
-    log(msg);
-    playSound("click");
-    showActionModal("Поиски продолжаются", msg, "🔍");
-  }
-  updateUI();
-  renderRelations();
-}
-
-function meetStranger() {
-  const isMale = Math.random() > 0.5;
-  const list = isMale ? SYLLABLES.male : SYLLABLES.female;
-  const fName = list[Math.floor(Math.random() * list.length)];
-  const sName = SYLLABLES.surnames[Math.floor(Math.random() * SYLLABLES.surnames.length)];
-
-  const raceKeys = Object.keys(RACES);
-  const randRace = RACES[raceKeys[Math.floor(Math.random() * raceKeys.length)]].name;
-
-  const classes = ["Нищий", "Крестьянин", "Вольный наемник", "Купец", "Младший рыцарь", "Магистр школы", "Аристократ"];
-  const randClass = classes[Math.floor(Math.random() * classes.length)];
-
-  let baseCp = Math.floor(Math.random() * 2000) + 300;
-  if (randClass === "Младший рыцарь" || randClass === "Магистр школы") baseCp += 3500;
-
-  const newNpc = {
-    id: "npc_" + Date.now(),
-    name: `${fName} ${sName}`,
-    gender: isMale ? "male" : "female",
-    race: randRace,
-    age: Math.max(16, player.age + Math.floor(Math.random() * 8) - 4),
-    socialClass: randClass,
-    role: randClass,
-    cp: baseCp,
-    relation: Math.floor(Math.random() * 25) + 35,
-    status: "Знакомый",
-    isCanon: false,
-    isLost: false,
-    isDead: false
-  };
-
-  player.relations.push(newNpc);
-  const msg = `Вы повстречали: <b>${newNpc.name}</b> (${newNpc.race}, ${newNpc.age} лет, ${newNpc.socialClass}, БМ: ${baseCp.toLocaleString()}).`;
-  log(msg);
-  playSound("click");
-  showActionModal("Новое знакомство", msg, "👥");
-  renderRelations();
-  updateUI();
-}
-
-// ------------------------------------------
-// 12. ХОД ВРЕМЕНИ И СТАРЕНИЕ
-// ------------------------------------------
-
-function ageUp() {
-  player.age++;
-  currentWorldYear++;
-
-  player.maxAp = getMaxAP(player.age);
-  player.ap = player.maxAp;
-  player.mana = player.maxMana;
-
-  // Регенерация здоровья от жилья
-  let regen = 5;
-  if (player.familySeat) {
-    const seatObj = ESTATES.find(e => e.id === player.familySeat);
-    if (seatObj) regen = seatObj.hpRegen || 15;
-  }
-  player.hp = Math.min(player.maxHp, player.hp + regen);
-
-  // Старение и естественная смерть знакомых
-  if (player.relations && player.relations.length > 0) {
-    player.relations.forEach(npc => {
-      if (!npc.isDead) {
-        npc.age = (npc.age || 20) + 1;
-        // Проверка на старость для людей (>68 лет)
-        if (npc.race === "Человек" && npc.age > 68 && Math.random() < 0.12) {
-          npc.isDead = true;
-          npc.status = "Покойный(ая)";
-          log(`🕯️ Ваш знакомый <b>${npc.name}</b> мирно скончался от глубокой старости в возрасте ${npc.age} лет.`);
-        }
-      }
-    });
-  }
-
-  generateYearlyGuildQuests();
-
-  // Доход от недвижимости
-  if (player.estates && player.estates.length > 0) {
-    let passiveIncome = 0;
-    player.estates.forEach(estId => {
-      let est = ESTATES.find(e => e.id === estId);
-      if (est) passiveIncome += est.income;
-    });
-    player.coins += passiveIncome;
-    log(`💰 Доход от имений: <b>+${passiveIncome} монет</b>.`);
-  }
-
-  // Жалование со службы
-  if (player.currentJob) {
-    const jData = getJobDataById(player.currentJob);
-    const curRank = jData?.ranks[player.jobRankIndex];
-    if (curRank) {
-      player.coins += curRank.salary;
-      log(`💼 Получено жалование по чину: <b>+${curRank.salary} монет</b>.`);
-    }
-  }
-
-  // Доход с теневого подполья и риск облавы стражи
-  if (player.currentUndergroundJob) {
-    const uJob = UNDERGROUND_JOBS[player.currentRegionKey];
-    const curURank = uJob?.ranks[player.undergroundRankIndex];
-    if (curURank) {
-      if (Math.random() < curURank.risk) {
-        let fine = Math.min(player.coins, curURank.salary * 2);
-        player.coins -= fine;
-        player.hp = Math.max(10, player.hp - 25);
-        log(`🚨 <b>ОБЛАВА СТРАЖИ!</b> Ваша банда попала в засаду! Вы ранены и выплатили откуп: -${fine} монет!`);
-        playSound("death");
-      } else {
-        player.coins += curURank.salary;
-        log(`🗡️ Теневой синдикат выплатил куш: <b>+${curURank.salary} монет</b>.`);
-      }
-    }
-  }
-
-  // Зелья от алхимической оранжереи
-  if (player.castleUpgrades && player.castleUpgrades.includes("alchemy_lab")) {
-    player.potionsCount = (player.potionsCount || 0) + 2;
-    log(`🧪 Фамильная оранжерея произвела +2 целебных зелья.`);
-  }
-
-  // Рождение ребенка
-  if (player.pregnancy) {
-    const isMale = Math.random() > 0.5;
-    const list = isMale ? SYLLABLES.male : SYLLABLES.female;
-    const childName = list[Math.floor(Math.random() * list.length)];
-
-    let childRoll = Math.random();
-    let bonusMult = 1.0;
-    if (childRoll < 0.60) bonusMult = 1.15;
-    else if (childRoll > 0.90) bonusMult = 1.35;
-
-    const child = {
-      id: "child_" + Date.now(),
-      name: `${childName} ${player.surname}`,
-      gender: isMale ? "male" : "female",
-      age: 0,
-      birthYear: currentWorldYear,
-      cp: Math.round(500 * bonusMult),
-      role: bonusMult > 1.3 ? "Наследник рода (Вундеркинд ⭐)" : "Наследник рода",
-      relation: 100,
-      status: "Семья",
-      isFamily: true,
-      isChild: true,
-      isDead: false
-    };
-
-    player.children.push(child);
-    player.relations.push(child);
-    if (!player.appointedHeirId) player.appointedHeirId = child.id;
-    log(`🎉 <b>Пополнение в семье!</b> Родился ребенок — <b>${child.name}</b> (${child.gender === 'male' ? 'Сын' : 'Дочь'})!`);
-    playSound("win");
-    player.pregnancy = null;
-  }
-
-  // Катаклизм Маны 417 г.
-  if (currentWorldYear === CALAMITY_YEAR && !player.calamityTriggered) {
-    const calamityStory = STORY_ACTIVITIES.find(s => s.id === "story_10_calamity");
-    if (calamityStory) {
-      performStoryActivity("story_10_calamity");
-      return;
-    }
-  }
-
-  // Старение
-  if (player.age > (player.maxAge - 15) && player.trait?.id !== "god_mode") {
-    let decay = Math.floor(Math.random() * 10) + 5;
-    player.hp -= decay;
-    log(`Старость берет свое: ломота в суставах (-${decay} HP).`);
-  }
-
-  if (player.hp <= 0 || player.age >= player.maxAge) {
-    handleDeath(player.hp <= 0 ? "Смерть от ран и истощения сил" : "Мирная кончина от глубокой старости");
-    return;
-  }
-
-  // ГАРАНТИРОВАННОЕ ВЫПАДЕНИЕ СОБЫТИЯ КАЖДЫЙ ГОД
-  const eligibleEvents = RANDOM_EVENTS.filter(e => player.age >= e.minAge);
-  if (eligibleEvents.length > 0) {
-    const ev = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
-    triggerRandomEvent(ev);
-    return;
-  }
-
-  log("Год прошел в размеренных трудах и тренировках.");
-  playSound("click");
-  updateUI();
-}
-
-function triggerRandomEvent(eventObj) {
-  const iconEl = document.getElementById("event-icon");
-  const titleEl = document.getElementById("event-title");
-  const descEl = document.getElementById("event-desc");
-  const cBox = document.getElementById("event-choices");
-
-  if (iconEl) iconEl.innerText = eventObj.icon || "⚡";
-  if (titleEl) titleEl.innerText = eventObj.title;
-  if (descEl) descEl.innerText = eventObj.desc;
-  if (!cBox) return;
-
-  cBox.innerHTML = "";
-
-  eventObj.choices.forEach(ch => {
-    const btn = document.createElement("button");
-    btn.className = "event-choice-btn";
-    btn.innerText = ch.text;
-    btn.onclick = () => {
-      const outcome = ch.action(player);
-      const modal = document.getElementById("event-modal");
-      if (modal) modal.style.display = "none";
-      log(`<b>[Выбор]</b> ${outcome}`);
-      playSound("click");
-      showActionModal("Итог события", outcome, eventObj.icon || "⚡");
-      updateUI();
-      if (player.hp <= 0) handleDeath("Пал жертвой роковых обстоятельств года.");
-    };
-    cBox.appendChild(btn);
-  });
-
-  const modal = document.getElementById("event-modal");
-  if (modal) modal.style.display = "flex";
-}
-
-// ------------------------------------------
-// 13. СМЕРТЬ, ЗАВЕЩАНИЕ И ЗАЛ СЛАВЫ
-// ------------------------------------------
-
-function getDynastyHistory() {
-  return JSON.parse(localStorage.getItem("bit_tensei_history") || "[]");
-}
-
-function recordAncestorToHistory(p, deathReason) {
-  let hist = getDynastyHistory();
-  hist.push({
-    gen: p.generation,
-    name: p.name,
-    gender: p.gender,
-    race: p.race,
-    peakCp: calcCombatPower(p),
-    maxAge: p.age,
-    deathReason: deathReason,
-    nobility: p.nobilityTitle,
-    coinsLeft: p.coins
-  });
-  localStorage.setItem("bit_tensei_history", JSON.stringify(hist));
-}
-
-function handleDeath(reason) {
-  playSound("death");
-  recordAncestorToHistory(player, reason);
-
-  const reasonEl = document.getElementById("death-reason");
-  if (reasonEl) reasonEl.innerText = `${reason} в возрасте ${player.age} лет.`;
-
-  const summaryBox = document.getElementById("death-summary");
-  if (summaryBox) {
-    summaryBox.innerHTML = `
-      <div style="background:#1c202b; padding:12px; border-radius:10px; font-size:12px; margin-bottom:12px;">
-        <div>🎖️ Имя: <b>${player.name}</b> (${player.gender === 'male' ? '♂️' : '♀️'}, ${player.race})</div>
-        <div>📅 Прожито: <b>${player.age} лет</b> (с ${currentWorldYear - player.age} по ${currentWorldYear} г.)</div>
-        <div>⚡ Пиковая БМ: <b>${calcCombatPower(player).toLocaleString()}</b></div>
-        <div>🪙 Оставлено золота: <b>${player.coins} монет</b></div>
-        <div>🏰 Владений рода: <b>${player.estates ? player.estates.length : 0}</b></div>
-        <div>👶 Наследников: <b>${player.children.length}</b></div>
-      </div>
-    `;
-  }
-
-  const heirsBlock = document.getElementById("heirs-list");
-  if (heirsBlock) {
-    heirsBlock.innerHTML = "";
-    const children = (player.children || []).filter(c => !c.isDead);
-
-    if (children.length > 0) {
-      const heirSelectionBlock = document.getElementById("heir-selection-block");
-      if (heirSelectionBlock) heirSelectionBlock.style.display = "block";
-
-      children.forEach(child => {
-        const childRealAge = Math.max(1, currentWorldYear - (child.birthYear || (currentWorldYear - 20)));
-        const isAppointed = (player.appointedHeirId === child.id);
-
-        const hCard = document.createElement("div");
-        hCard.className = "shop-item";
-        hCard.innerHTML = `
-          <div>
-            <b style="color:#fff;">${child.name}</b> ${isAppointed ? '<span class="badge-legendary">Наследник по завещанию (100% золота) 👑</span>' : ''}
-            <div style="font-size:11px; color:var(--muted);">${child.gender === 'male' ? 'Сын' : 'Дочь'} • Возраст: <b>${childRealAge} лет</b> • ${child.role}</div>
-          </div>
-          <button style="background:#10b981;" onclick="continueAsHeir('${child.id}', ${childRealAge})">Играть 👑</button>
-        `;
-        heirsBlock.appendChild(hCard);
-      });
-    } else {
-      const heirSelectionBlock = document.getElementById("heir-selection-block");
-      if (heirSelectionBlock) heirSelectionBlock.style.display = "none";
-    }
-  }
-
-  const deathOverlay = document.getElementById("death-overlay");
-  if (deathOverlay) deathOverlay.style.display = "flex";
-}
-
-function continueAsHeir(childId, realAge) {
-  const child = player.children.find(c => c.id === childId);
-  dynastyGeneration++;
-
-  // Если наследник был назначен в завещании — передается 100% золота, иначе 70%
-  const isAppointed = (player.appointedHeirId === childId);
-  const inheritedCoins = isAppointed ? player.coins : Math.floor(player.coins * 0.7);
-
-  const raceObj = Object.values(RACES).find(r => r.name === player.race) || RACES.human;
-
-  const originMock = {
-    name: `Династия ${player.surname}`,
-    manaBonus: Math.floor(player.maxMana * 0.20),
-    swordGod: Math.floor(player.swordGodExp * 0.25),
-    coins: inheritedCoins,
-    int: 12,
-    log: `Вы продолжили славный род ${player.surname}. ${isAppointed ? 'По завещанию вам отошло 100% семейной казны!' : 'Семейное золото перешло к вам.'}`
-  };
-
-  const oldEstates = player.estates || [];
-  const oldSeat = player.familySeat;
-  const oldUpgrades = player.castleUpgrades || [];
-  const oldNobility = player.nobilityTitle;
-  const oldAsuraFaction = player.asuraFaction;
-  const oldLangs = player.languages || ["human"];
-
-  const deathOverlay = document.getElementById("death-overlay");
-  if (deathOverlay) deathOverlay.style.display = "none";
-  
-  initCharacter(child.name.split(" ")[0], player.surname, child.gender, raceObj, player.currentRegionKey, originMock, player.trait, player.familyStatus, realAge);
-  
-  player.estates = oldEstates;
-  player.familySeat = oldSeat;
-  player.castleUpgrades = oldUpgrades;
-  player.nobilityTitle = oldNobility;
-  player.asuraFaction = oldAsuraFaction;
-  player.languages = oldLangs;
-}
-
-function startNewDynasty() {
-  const newKarma = addReincarnationKarma();
-  const deathOverlay = document.getElementById("death-overlay");
-  if (deathOverlay) deathOverlay.style.display = "none";
-  dynastyGeneration = 1;
-  currentWorldYear = START_YEAR;
-  localStorage.removeItem("bit_tensei_save");
-  alert(`🌀 Душа вернулась в Колесо Сансары! Накоплена Карма ${newKarma}-го уровня.`);
-  showCreation();
-}
-
-function confirmReset() {
-  if (confirm("Завершить текущую жизнь и начать новую династию с чистого листа?")) {
-    startNewDynasty();
-  }
-}
-
-// ------------------------------------------
-// 14. СЕМЬ ВЕЛИКИХ СИЛ И БИТВЫ
-// ------------------------------------------
-
 function renderPowersMonument() {
   const monCont = document.getElementById("powers-monument-list");
   if (!monCont) return;
   monCont.innerHTML = "";
 
-  const myCp = calcCombatPower(player);
-
   SEVEN_GREAT_POWERS.forEach(pow => {
-    const isPlayerSeat = (pow.isDead && pow.killerDynasty === player.surname);
+    const isPlayerSeat = (player.currentPowersSeat === pow.rank);
     const row = document.createElement("div");
     row.className = `power-row ${isPlayerSeat ? 'power-player' : ''}`;
     
@@ -2565,20 +1644,75 @@ function renderPowersMonument() {
       <div style="display:flex; align-items:center;">
         <span class="power-rank">#${pow.rank}</span>
         <div>
-          <b>${isPlayerSeat ? player.name + ' (ВЫ / ВАШ РОД!)' : pow.title + ' — ' + (pow.isDead ? '💀 ПАЛ: ' + pow.name : pow.name)}</b>
-          <div style="font-size:10px; color:var(--muted);">${pow.isDead ? 'Свергнут родом ' + (pow.killerDynasty || 'Грейрат') : 'Мощь: ' + pow.cp.toLocaleString() + ' БМ'}</div>
+          <b>${isPlayerSeat ? player.name + ' (ВЫ!)' : pow.title + ' — ' + (pow.isDead ? '💀 СВЕРГНУТ: ' + pow.name : pow.name)}</b>
+          <div style="font-size:10px; color:var(--muted);">${pow.isDead ? 'Свергнут героем ' + (pow.killerDynasty || 'Грейрат') : 'Мощь: ' + pow.cp.toLocaleString() + ' БМ'}</div>
         </div>
       </div>
       <div>
-        ${pow.isDead ? '<span class="badge-mythic">СВЕРГНУТ</span>' : `
-          <button class="btn-challenge" ${myCp >= pow.cp * 0.45 ? '' : 'disabled'} onclick="challengeSevenPower(${pow.rank})">
-            ⚔️ Бросить вызов
+        ${pow.isDead ? '<span class="badge-mythic">СВЕРГНУТ</span>' : isPlayerSeat ? '<span class="badge-legendary">ВАШ ТИТУЛ 👑</span>' : `
+          <button class="btn-challenge" ${player.discoveredSevenPowers?.includes(pow.rank) ? '' : 'disabled'} onclick="challengeSevenPower(${pow.rank})">
+            ${player.discoveredSevenPowers?.includes(pow.rank) ? '⚔️ Бросить вызов' : '🔒 Не найден'}
           </button>
         `}
       </div>
     `;
     monCont.appendChild(row);
   });
+}
+
+function renderSevenPowersQuest() {
+  const container = document.getElementById("seven-powers-quest-container");
+  const notifyBadge = document.getElementById("seven-powers-notify");
+  if (!container) return;
+  container.innerHTML = "";
+
+  player.discoveredSevenPowers = player.discoveredSevenPowers || [];
+
+  const nextQuest = SEVEN_POWERS_QUESTS.find(q => {
+    const target = SEVEN_GREAT_POWERS.find(p => p.rank === q.rank);
+    return target && !target.isDead && !player.discoveredSevenPowers.includes(q.rank);
+  });
+
+  if (!nextQuest) {
+    if (notifyBadge) notifyBadge.style.display = "none";
+    container.innerHTML = `<div style="font-size:11px; color:var(--muted); padding:6px;">Все доступные владыки Семи Сил выслежены или свергнуты!</div>`;
+    return;
+  }
+
+  const myCp = calcCombatPower(player);
+  const canTrack = myCp >= nextQuest.reqCp;
+  const inRegion = player.currentRegionKey === nextQuest.regionKey;
+
+  if (notifyBadge) notifyBadge.style.display = canTrack ? "inline-block" : "none";
+
+  container.innerHTML = `
+    <div class="powers-quest-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <b style="color:#f59e0b; font-size:13px;">🔍 Поиск Владыки #${nextQuest.rank}: ${nextQuest.title}</b>
+        <span class="badge-rare">Требует: ${nextQuest.reqCp.toLocaleString()} БМ</span>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin:4px 0;">${nextQuest.desc}</div>
+      <div style="font-size:10px; color:var(--accent-light);">Локация поиска: ${REGIONS[nextQuest.regionKey]?.name || 'Мир'}</div>
+      <button ${canTrack && inRegion ? '' : 'disabled'} style="background:#d97706; width:100%; margin-top:6px;" onclick="trackSevenPower(${nextQuest.rank})">
+        ${!canTrack ? `Недостаточно сил (${myCp.toLocaleString()} / ${nextQuest.reqCp.toLocaleString()} БМ)` : !inRegion ? `Прибудьте в регион поиска` : '🧭 Провести разведку и найти Владыку (⚡ 1 сила)'}
+      </button>
+    </div>
+  `;
+}
+
+function trackSevenPower(rank) {
+  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
+  player.ap -= 1;
+  player.discoveredSevenPowers = player.discoveredSevenPowers || [];
+  player.discoveredSevenPowers.push(rank);
+
+  const pow = SEVEN_GREAT_POWERS.find(p => p.rank === rank);
+  const msg = `🧭 <b>ВЫСЛЕЖЕН ВЛАДЫКА СЕМИ СИЛ!</b> Вы нашли тайное логово #${pow.rank} ${pow.title} — <b>${pow.name}</b>! Теперь ему можно официально бросить вызов на Монументе!`;
+  log(msg);
+  playSound("win");
+  showActionModal("Владыка обнаружен!", msg, "🏆");
+  updateUI();
+  renderGuildTab();
 }
 
 function challengeSevenPower(rank) {
@@ -2588,7 +1722,7 @@ function challengeSevenPower(rank) {
   if (!confirm(`Вы уверены, что готовы бросить вызов #${pow.rank} ${pow.title} — ${pow.name}?`)) return;
 
   currentBattle = {
-    quest: { enemy: `${pow.title} ${pow.name}`, rank: "Семь Сил", reward: 20000, gp: 500 },
+    quest: { enemy: `${pow.title} ${pow.name}`, rank: "Семь Сил", reward: 25000, gp: 500 },
     enemyHp: pow.hp,
     enemyMaxHp: pow.maxHp,
     enemyCp: pow.cp,
@@ -2606,7 +1740,64 @@ function challengeSevenPower(rank) {
   if (cpEl) cpEl.innerText = `БМ: ${pow.cp.toLocaleString()}`;
   if (hpText) hpText.innerText = `${pow.hp}/${pow.maxHp}`;
   if (hpBar) hpBar.style.width = "100%";
-  if (logBox) logBox.innerHTML = `⚡ Схватка за место на Монументе Семи Сил против <b>${pow.name}</b> началась!`;
+  if (logBox) logBox.innerHTML = `⚡ Схватка за титул #${pow.rank} Семи Сил против <b>${pow.name}</b> началась!`;
+
+  const modal = document.getElementById("battle-modal");
+  if (modal) modal.style.display = "flex";
+  playSound("calamity");
+}
+
+function renderVoidHitogamiSection() {
+  const container = document.getElementById("void-hitogami-section");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const myCp = calcCombatPower(player);
+  const meetsGen = player.generation >= HITOGAMI_ENDGAME.reqGen;
+  const meetsCp = myCp >= HITOGAMI_ENDGAME.reqCp;
+  const meetsFaction = player.dynastyFaction === HITOGAMI_ENDGAME.reqFaction;
+
+  if (!meetsGen) return;
+
+  container.innerHTML = `
+    <div class="void-rift-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <b style="color:#c084fc; font-size:14px;">🌌 Прорыв в Белое Пространство (Эндгейм)</b>
+        <span class="badge-mythic">Поколение ${player.generation}/6+</span>
+      </div>
+      <div style="font-size:11px; color:#e2e8f0; margin:6px 0;">
+        Финальная кульминация вековой войны! Вместе с Орстедом разорвать барьер Пустоты и сокрушить Бога Людей в его измерении.
+      </div>
+      <div style="font-size:10px; color:var(--gold);">Требования: Союзник Орстеда • 2,500,000+ БМ</div>
+      <button ${meetsCp && meetsFaction ? '' : 'disabled'} style="background:linear-gradient(135deg, #7c3aed, #4c1d95); width:100%; margin-top:8px; font-weight:700;" onclick="startHitogamiFinalRaid()">
+        ${!meetsFaction ? 'Требуется встать под знамена Орстеда' : !meetsCp ? 'Недостаточно силы для разрыва Пустоты' : '⚔️ ВОРВАТЬСЯ В ИЗМЕРЕНИЕ ХИТОГАМИ (ФИНАЛЬНЫЙ БОЙ)'}
+      </button>
+    </div>
+  `;
+}
+
+function startHitogamiFinalRaid() {
+  if (!confirm("Вы стоите на пороге Белого Измерения вместе с Богом Драконов Орстедом. Начать финальную битву эпохи против Хитогами?")) return;
+
+  currentBattle = {
+    quest: { enemy: HITOGAMI_ENDGAME.boss.name, rank: "Истинный Бог", reward: 100000, gp: 1000 },
+    enemyHp: HITOGAMI_ENDGAME.boss.hp,
+    enemyMaxHp: HITOGAMI_ENDGAME.boss.maxHp,
+    enemyCp: HITOGAMI_ENDGAME.boss.cp,
+    isHitogami: true
+  };
+
+  const nameEl = document.getElementById("battle-enemy-name");
+  const cpEl = document.getElementById("battle-enemy-cp");
+  const hpText = document.getElementById("battle-enemy-hp-text");
+  const hpBar = document.getElementById("battle-enemy-hp-bar");
+  const logBox = document.getElementById("battle-log");
+
+  if (nameEl) nameEl.innerText = HITOGAMI_ENDGAME.boss.name;
+  if (cpEl) cpEl.innerText = `БМ: ${HITOGAMI_ENDGAME.boss.cp.toLocaleString()}`;
+  if (hpText) hpText.innerText = `${HITOGAMI_ENDGAME.boss.hp}/${HITOGAMI_ENDGAME.boss.maxHp}`;
+  if (hpBar) hpBar.style.width = "100%";
+  if (logBox) logBox.innerHTML = `🌌 <b>ПРОРЫВ В ПУСТОТУ!</b> Белое сияние ослепляет. Перед вами коварный силуэт Бога Людей Хитогами!`;
 
   const modal = document.getElementById("battle-modal");
   if (modal) modal.style.display = "flex";
@@ -2624,8 +1815,8 @@ function combatAction(actionType) {
   let hasAppraisal = (player.demonEyes?.left?.id === "appraisal" || player.demonEyes?.right?.id === "appraisal");
 
   if (actionType === "flee") {
-    if (currentBattle.isSevenPower) {
-      if (logBox) logBox.innerHTML += `<div style="color:var(--hp)">Из битвы с Семью Силами отступить невозможно!</div>`;
+    if (currentBattle.isSevenPower || currentBattle.isHitogami) {
+      if (logBox) logBox.innerHTML += `<div style="color:var(--hp)">Из этой судьбоносной битвы отступить невозможно!</div>`;
       return;
     }
     if (logBox) logBox.innerHTML += `<div>🏃 Вы разорвали дистанцию и отступили!</div>`;
@@ -2665,7 +1856,7 @@ function combatAction(actionType) {
       player.mana -= 10;
       myDamage = Math.floor(player.magicExp * (squadCp / (enemyCp + 100)) * 2.8) + Math.floor(Math.random() * 35) + 25;
       if (hasAppraisal) myDamage = Math.floor(myDamage * 1.3);
-      if (logBox) logBox.innerHTML += `<div style="color:var(--mana)">🔮 Удар стихией: <b>-${myDamage} HP</b>!</div>`;
+      if (logBox) logBox.innerHTML += `<div>🔮 Удар стихией: <b>-${myDamage} HP</b>!</div>`;
       playSound("magic");
     }
   }
@@ -2676,10 +1867,16 @@ function combatAction(actionType) {
     if (logBox) logBox.innerHTML += `<div style="color:var(--gold); font-weight:700;">🏆 ПОБЕДА! Враг повержен!</div>`;
     playSound("win");
 
-    if (currentBattle.isSevenPower) {
+    if (currentBattle.isHitogami) {
+      const msg = `🌌👑 <b>БОГ ЛЮДЕЙ ПОВЕРЖЕН!</b> Вы и Орстед сокрушили Хитогами! Мироздание спасено от манипуляций Пустоты! Ваша династия вошла в Пантеон Бессмертных Богов!`;
+      log(msg);
+      player.coins += 100000;
+      showActionModal("ФИНАЛ САГИ", msg, "👑");
+    } else if (currentBattle.isSevenPower) {
       currentBattle.powerObj.isDead = true;
       currentBattle.powerObj.killerDynasty = player.surname;
-      const msg = `👑💥 <b>ИСТОРИЧЕСКИЙ ТРИУМФ!</b> Вы сокрушили #${currentBattle.powerObj.rank} ${currentBattle.powerObj.title} — ${currentBattle.powerObj.name}! Ваше имя навсегда высечено на Монументе Семи Сил!`;
+      player.currentPowersSeat = currentBattle.powerObj.rank;
+      const msg = `👑💥 <b>ИСТОРИЧЕСКИЙ ТРИУМФ!</b> Вы сокрушили #${currentBattle.powerObj.rank} ${currentBattle.powerObj.title} — ${currentBattle.powerObj.name}! Вы заняли его трон на Монументе Семи Сил!`;
       log(msg);
       player.coins += 25000;
       renderPowersMonument();
@@ -2728,7 +1925,7 @@ function combatAction(actionType) {
     const modal = document.getElementById("battle-modal");
     if (modal) modal.style.display = "none";
     currentBattle = null;
-    handleDeath(currentBattle?.isSevenPower ? `Пал в битве за место в Семи Силах` : `Погиб в схватке`);
+    handleDeath(currentBattle?.isHitogami ? `Пал в битве с Богом Людей Хитогами` : currentBattle?.isSevenPower ? `Пал в битве за место в Семи Силах` : `Погиб в схватке`);
   }
 }
 
@@ -2866,10 +2063,6 @@ function checkSquadBetrayal() {
   }
   return false;
 }
-
-// ------------------------------------------
-// 15. ПУТЕШЕСТВИЯ, ШКОЛЫ И ПОЛИТИКА
-// ------------------------------------------
 
 function renderTravelTab() {
   const container = document.getElementById("world-travel-list");
@@ -3090,6 +2283,928 @@ function renderDynastyTree() {
   });
 }
 
+function renderChaosBreaker() {
+  const container = document.getElementById("perugius-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  const myCp = calcCombatPower(player);
+
+  container.innerHTML += `
+    <div class="card" style="background:#1e1a2f; border-color:#eab308; margin-bottom:10px;">
+      <b style="color:#fde047; font-size:13px;">🐉 Дрейфующая Цитадель Хаос Брейкер</b>
+      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+        Обитель Короля-Дракона Перугиуса Долы. Доступна героям с высоким признанием.
+      </div>
+    </div>
+  `;
+
+  PERUGIUS_TRIALS.forEach(tr => {
+    const passed = player.perugiusTrials && player.perugiusTrials.includes(tr.rank);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <b style="color:#fff;">#${tr.rank} ${tr.name}</b>
+        <span class="badge-legendary">${passed ? 'Пройдено ✓' : 'Требует: ' + tr.reqCp.toLocaleString() + ' БМ'}</span>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin:4px 0;">Награда: ${tr.rewardText}</div>
+      <button ${passed || myCp < tr.reqCp ? 'disabled' : ''} style="background:${passed ? '#059669' : '#eab308'}; color:${passed ? '#fff' : '#000'} !important; width:100%; margin-top:4px;" onclick="attemptPerugiusTrial(${tr.rank})">
+        ${passed ? '✓ Испытание зачтено' : myCp < tr.reqCp ? 'Недостаточно боевой мощи' : 'Бросить вызов стражу'}
+      </button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function attemptPerugiusTrial(rank) {
+  const tr = PERUGIUS_TRIALS.find(t => t.rank === rank);
+  player.perugiusTrials = player.perugiusTrials || [];
+  player.perugiusTrials.push(rank);
+
+  if (rank === 3) {
+    player.coins += 5000;
+    player.trait = TRAITS.find(t => t.id === "laplace_factor") || player.trait;
+  }
+
+  const msg = `👑 <b>ВЫСШИЙ ТРИУМФ В ХАОС БРЕЙКЕРЕ!</b> Вы одолели стража #${rank} Перугиуса! Получено: ${tr.rewardText}!`;
+  log(msg);
+  playSound("win");
+  showActionModal("Испытание Перугиуса", msg, "🐉");
+  updateUI();
+  renderChaosBreaker();
+}
+
+function renderGreyratBranches() {
+  const container = document.getElementById("greyrat-branches-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  container.innerHTML += `
+    <div class="card" style="background:#20141a; border-color:#ef4444; margin-bottom:10px;">
+      <b style="color:#fca5a5; font-size:13px;">🩸 Кровная Вражда Великого Дома Грейрат</b>
+      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+        Четыре ветви ведут скрытую войну за единовластие над королевством Асура.
+      </div>
+    </div>
+  `;
+
+  GREYRAT_BRANCHES.forEach(b => {
+    const isAllied = player.greyratAllies && player.greyratAllies.includes(b.id);
+    const card = document.createElement("div");
+    card.className = "card";
+    card.style.marginBottom = "8px";
+    card.innerHTML = `
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <b style="color:#fff;">${b.name}</b>
+        <span class="badge-mythic">${isAllied ? 'В союзе ✓' : b.region}</span>
+      </div>
+      <div style="font-size:11px; color:var(--muted); margin:4px 0;">Глава ветви: <b>${b.leader}</b> • ${b.desc}</div>
+      <button ${isAllied ? 'disabled' : ''} style="background:${isAllied ? '#059669' : '#b91c1c'}; width:100%; margin-top:4px;" onclick="negotiateGreyratBranch('${b.id}')">
+        ${isAllied ? 'Союз заключен' : 'Отправить послов (Заключить пакт крови) (⚡ 1 сила)'}
+      </button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function negotiateGreyratBranch(branchId) {
+  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
+  player.ap -= 1;
+  player.greyratAllies = player.greyratAllies || [];
+
+  const b = GREYRAT_BRANCHES.find(x => x.id === branchId);
+  if (player.asuraInfluence >= 30 || player.swordGodExp >= 80 || calcCombatPower(player) > 10000) {
+    player.greyratAllies.push(branchId);
+    player.asuraInfluence += 25;
+    const msg = `Вы заключили династический пакт с <b>${b.name}</b>! Авторитет дома Грейрат объединен (+25 влияния)!`;
+    log(msg);
+    playSound("win");
+    showActionModal("Династический Союз", msg, "🩸");
+  } else {
+    const msg = `Послы ${b.name} надменно отвергли предложение: ваш статус пока недостаточно велик.`;
+    log(msg);
+    playSound("click");
+    showActionModal("Отказ послов", msg, "📜");
+  }
+  updateUI();
+  renderGreyratBranches();
+}
+
+function renderTablets() {
+  const container = document.getElementById("tablets-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  player.tabletsDeciphered = player.tabletsDeciphered || [];
+
+  container.innerHTML += `
+    <div class="card" style="background:#151c28; border-color:#38bdf8; margin-bottom:10px;">
+      <b style="color:#38bdf8; font-size:13px;">📜 Археология: Расшифровано ${player.tabletsDeciphered.length}/5 Скрижалей</b>
+      <div style="font-size:11px; color:var(--muted); margin-top:2px;">
+        Соберите древнюю истину Первой Войны для открытия священного заклинания.
+      </div>
+    </div>
+  `;
+
+  FIRST_WAR_TABLETS.forEach(t => {
+    const isDone = player.tabletsDeciphered.includes(t.id);
+    const knowsLang = player.languages && player.languages.includes(t.reqLang);
+    const inRegion = player.currentRegionKey === t.regionKey;
+    const canDecipher = !isDone && knowsLang && inRegion;
+
+    const card = document.createElement("div");
+    card.className = "tablet-card";
+    card.innerHTML = `
+      <div>
+        <b style="color:#fff;">${t.name}</b> ${isDone ? '<span style="color:var(--green); font-size:11px;">(Расшифровано ✓)</span>' : ''}
+        <div style="font-size:11px; color:var(--muted);">${t.desc}</div>
+        <div style="font-size:10px; color:var(--accent-light);">Язык: ${LANGUAGES[t.reqLang]?.name} • Регион: ${REGIONS[t.regionKey]?.name || 'Мир'}</div>
+      </div>
+      <button ${canDecipher ? '' : 'disabled'} style="background:${isDone ? '#059669' : '#0284c7'};" onclick="decipherTablet('${t.id}')">
+        ${isDone ? 'Готово' : !knowsLang ? 'Не знаете языка' : !inRegion ? 'Прибудьте в регион' : 'Расшифровать'}
+      </button>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function decipherTablet(tabletId) {
+  player.tabletsDeciphered = player.tabletsDeciphered || [];
+  player.tabletsDeciphered.push(tabletId);
+  player.intellect += 20;
+  player.maxMana += 30;
+
+  const t = FIRST_WAR_TABLETS.find(x => x.id === tabletId);
+  let msg = `Вы перевели древние символы на «${t.name}» (+20 к Знаниям, +30 макс. маны)!`;
+
+  if (player.tabletsDeciphered.length === 5) {
+    player.maxMana += 200;
+    player.magicExp += 200;
+    msg += `<br><br>🌟 <b>ВЕЛИКОЕ ОТКРЫТИЕ!</b> Вы расшифровали все 5 скрижалей Первой Войны! Открыто Священное Заклинание Изначального Бога (+200 ко всем школам магии)!`;
+    playSound("win");
+  } else {
+    playSound("magic");
+  }
+
+  log(msg);
+  showActionModal("Расшифровка Скрижали", msg, "📜");
+  updateUI();
+  renderTablets();
+}
+
+function renderLanguages() {
+  const container = document.getElementById("languages-container");
+  if (!container) return;
+  container.innerHTML = "";
+
+  player.languages = player.languages || ["human"];
+
+  for (let lKey in LANGUAGES) {
+    const lObj = LANGUAGES[lKey];
+    const isKnown = player.languages.includes(lKey);
+    const card = document.createElement("div");
+    card.className = "lang-card";
+    card.innerHTML = `
+      <div>
+        <b style="color:#fff;">${lObj.name}</b> ${isKnown ? '<span style="color:var(--green); font-size:11px;">(Изучено ✓)</span>' : ''}
+        <div style="font-size:11px; color:var(--muted);">${lObj.desc}</div>
+      </div>
+      <button ${isKnown ? 'disabled' : ''} style="background:${isKnown ? '#059669' : '#312e81'};" onclick="learnLanguage('${lKey}')">
+        ${isKnown ? 'Изучено' : 'Учить язык (60🪙, ⚡ 1 сила)'}
+      </button>
+    `;
+    container.appendChild(card);
+  }
+}
+
+function learnLanguage(langKey) {
+  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
+  if (player.coins < 60) { showActionModal("Нехватка золота", "Нужно 60 монет на словари!", "🪙"); return; }
+
+  player.ap -= 1;
+  player.coins -= 60;
+  player.languages = player.languages || ["human"];
+  player.languages.push(langKey);
+  player.intellect += 8;
+
+  const l = LANGUAGES[langKey];
+  const msg = `Вы овладели наречием: <b>${l.name}</b> (+8 к Знаниям)!`;
+  log(msg);
+  playSound("win");
+  showActionModal("Изучение Языка", msg, "🗣️");
+  updateUI();
+  renderLanguages();
+}
+
+function toggleNpcActions(npcId) {
+  currentOpenedNpcId = (currentOpenedNpcId === npcId) ? null : npcId;
+  renderRelations();
+}
+
+function renderRelations() {
+  const container = document.getElementById("relations-list");
+  if (!container) return;
+  container.innerHTML = "";
+  if (!player || !player.relations) return;
+
+  player.relations.forEach(npc => {
+    let statusClass = "status-friend";
+    if (npc.isDead) statusClass = "status-dead";
+    else if (npc.relation < 30) statusClass = "status-enemy";
+    else if (npc.status === "Супруг/Супруга") statusClass = "status-married";
+    else if (npc.status === "Пара") statusClass = "status-love";
+
+    const isOpened = (currentOpenedNpcId === npc.id);
+    const inSquad = player.squad && player.squad.some(m => m.id === npc.id);
+    const pAge = player.age;
+
+    const card = document.createElement("div");
+    card.className = "relation-card";
+    card.innerHTML = `
+      <div class="rel-header" onclick="${npc.isDead ? '' : `toggleNpcActions('${npc.id}')`}" style="cursor:${npc.isDead ? 'default' : 'pointer'};">
+        <div>
+          <div class="rel-name">
+            ${npc.name}
+            ${npc.isCanon ? '<span class="badge-canon">Канон ⭐</span>' : ''}
+            ${npc.isChild ? '<span style="color:#fbbf24; font-size:11px;">(Наследник 👶)</span>' : ''}
+            ${npc.isLost ? '<span class="badge-mythic" style="font-size:10px;">Пропал в Катаклизме ⚡</span>' : ''}
+            ${npc.isDead ? '<span class="status-dead" style="font-size:11px;">(Покойный ✝)</span>' : ''}
+            ${inSquad ? '<span class="badge-rare">В отряде 🛡️</span>' : ''}
+          </div>
+          <div class="rel-role">${npc.role || npc.race} • Возраст: <b>${npc.age || 20} лет</b> • БМ: <b>${(npc.cp || 500).toLocaleString()}</b></div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:13px; font-weight:700;"><span class="${statusClass}">${npc.status}</span> ${npc.isDead ? '' : `(${npc.relation}%)`}</div>
+          ${!npc.isDead ? `<div style="font-size:10px; color:var(--accent);">${isOpened ? '▲ Свернуть' : '▼ Взаимодействовать'}</div>` : ''}
+        </div>
+      </div>
+      ${!npc.isDead ? `
+        <div class="bar-bg" onclick="toggleNpcActions('${npc.id}')" style="cursor:pointer;">
+          <div class="bar-fill bar-relation" style="width: ${Math.max(0, Math.min(100, npc.relation))}%; background: ${npc.relation < 30 ? 'var(--hp)' : 'var(--green)'};"></div>
+        </div>
+      ` : ''}
+
+      ${isOpened && !npc.isDead ? `
+        <div class="npc-inline-actions">
+          ${npc.isLost ? `
+            <button class="npc-action-full" style="background:#b45309;" onclick="searchLostFamily('${npc.id}')">🔍 Отправиться на поиски по континентам (⚡ 1 сила)</button>
+          ` : pAge < 4 ? `
+            <button onclick="actionBabyPlay('${npc.id}')">👶 Поиграть в ладушки</button>
+            <button onclick="actionBabyCuddle('${npc.id}')">🍼 Попроситься на ручки</button>
+          ` : pAge < 10 ? `
+            <button onclick="actionChildStory('${npc.id}')">📖 Попросить сказку</button>
+            <button onclick="actionChildPrank('${npc.id}')">😜 Пошалить</button>
+            <button onclick="actionChildPocketMoney('${npc.id}')">🪙 Попросить монету</button>
+            <button onclick="actionSparring('${npc.id}')">🪵 Попросить урок меча</button>
+          ` : pAge < 16 ? `
+            <button onclick="actionTalk('${npc.id}')">💬 Поговорить о будущем</button>
+            <button onclick="actionGift('${npc.id}')">🎁 Подарок (15🪙)</button>
+            <button onclick="actionSparring('${npc.id}')">⚔️ Спарринг мечей</button>
+            <button onclick="actionTavernDrink('${npc.id}')">🧃 Угостить соком (8🪙)</button>
+            ${pAge >= 14 && !npc.isFamily && !npc.isChild && npc.status !== "Пара" && npc.status !== "Супруг/Супруга" ? `
+              <button class="action-love npc-action-full" onclick="actionConfess('${npc.id}')">❤️ Признаться в чувствах</button>
+            ` : ''}
+          ` : `
+            <button onclick="actionTalk('${npc.id}')">💬 Побеседовать</button>
+            <button onclick="actionGift('${npc.id}')">🎁 Подарок (15🪙)</button>
+            <button onclick="actionTavernDrink('${npc.id}')">🍻 Выпить в таверне (12🪙)</button>
+            <button onclick="actionSparring('${npc.id}')">⚔️ Спарринг мечей</button>
+            <button onclick="actionBorrowGold('${npc.id}')">🪙 Занять монет</button>
+            <button class="action-danger" onclick="actionInsult('${npc.id}')">🤬 Оскорбить</button>
+
+            ${!inSquad && !npc.isChild ? `
+              <button class="npc-action-full" style="background:#312e81;" onclick="addToSquad('${npc.id}')">🛡️ Пригласить в боевой отряд</button>
+            ` : ''}
+
+            ${!npc.isFamily && !npc.isChild && npc.status !== "Пара" && npc.status !== "Супруг/Супруга" ? `
+              <button class="action-love npc-action-full" onclick="actionConfess('${npc.id}')">❤️ Признаться в чувствах</button>
+            ` : ''}
+
+            ${!npc.isFamily && !npc.isChild && npc.status === "Пара" && !player.spouse ? `
+              <button class="action-married npc-action-full" onclick="actionMarry('${npc.id}')">💍 Сделать предложение руки и сердца</button>
+            ` : ''}
+
+            ${npc.status === "Супруг/Супруга" ? `
+              <button class="action-married npc-action-full" ${player.pregnancy ? 'disabled' : ''} onclick="actionHaveChild('${npc.id}')">
+                ${player.pregnancy ? '⏳ Ребенок родится через год' : '👶 Зачать ребенка (Родится через 1 год)'}
+              </button>
+            ` : ''}
+          `}
+        </div>
+      ` : ''}
+    `;
+    container.appendChild(card);
+  });
+}
+
+function actionBabyPlay(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  npc.relation = Math.min(100, npc.relation + 10);
+  const msg = `Вы весело хлопали в ладоши перед <b>${npc.name}</b>, оглашая комнату детским смехом (+10% отношений)!`;
+  log(msg);
+  playSound("win");
+  showActionModal("Детская игра", msg, "👶");
+  updateUI();
+  renderRelations();
+}
+
+function actionBabyCuddle(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  npc.relation = Math.min(100, npc.relation + 12);
+  player.hp = Math.min(player.maxHp, player.hp + 10);
+  const msg = `<b>${npc.name}</b> нежно взял(а) вас на ручки и укачивал у очага (+12% отношений, +10 HP)!`;
+  log(msg);
+  playSound("magic");
+  showActionModal("На ручках", msg, "🍼");
+  updateUI();
+  renderRelations();
+}
+
+function actionChildStory(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  npc.relation = Math.min(100, npc.relation + 8);
+  player.intellect += 2;
+  const msg = `<b>${npc.name}</b> с увлечением рассказал вам захватывающую сказку о древних героях (+8% отношений, +2 к Знаниям)!`;
+  log(msg);
+  playSound("win");
+  showActionModal("Сказка", msg, "📖");
+  updateUI();
+  renderRelations();
+}
+
+function actionChildPrank(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  player.northGodExp += 6;
+  const msg = `Вы незаметно подложили сухую шишку в ботинок <b>${npc.name}</b>! Ваша детская плутовская сноровка растет (+6 к стилю Севера).`;
+  log(msg);
+  playSound("click");
+  showActionModal("Шалость", msg, "😜");
+  updateUI();
+  renderRelations();
+}
+
+function actionChildPocketMoney(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  if (npc.relation >= 70) {
+    let money = Math.floor(Math.random() * 5) + 2;
+    player.coins += money;
+    const msg = `<b>${npc.name}</b> улыбнулся и отсыпал вам немного медных монет на сладости (+${money}🪙)!`;
+    log(msg);
+    playSound("coin");
+    showActionModal("Карманные деньги", msg, "🪙");
+  } else {
+    showActionModal("Отказ", `${npc.name} строго велел не клянчить монеты по пустякам.`, "❌");
+  }
+  updateUI();
+  renderRelations();
+}
+
+function actionTavernDrink(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  const cost = player.age < 16 ? 8 : 12;
+  if (player.coins < cost) { showActionModal("Нехватка монет", `Нужно ${cost} монет!`, "🪙"); return; }
+
+  player.coins -= cost;
+  npc.relation = Math.min(100, npc.relation + 14);
+  const drinkName = player.age < 16 ? "ягодным соком" : "добрым элем";
+  const msg = `Вы провели вечер в таверне за ${drinkName} вместе с <b>${npc.name}</b> (+14% отношений)!`;
+  log(msg);
+  playSound("coin");
+  showActionModal("Вечер в таверне", msg, "🍻");
+  updateUI();
+  renderRelations();
+}
+
+function actionSparring(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+
+  player.swordGodExp += 10;
+  npc.cp = (npc.cp || 500) + 150;
+  const msg = `Вы провели спарринг на деревянных мечах с <b>${npc.name}</b> (+10 к Мечу обоим)!`;
+  log(msg);
+  playSound("sword");
+  showActionModal("Спарринг", msg, "⚔️");
+  updateUI();
+  renderRelations();
+}
+
+function actionBorrowGold(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+
+  if (npc.relation >= 75) {
+    let loan = Math.floor(Math.random() * 40) + 20;
+    player.coins += loan;
+    npc.relation -= 5;
+    const msg = `<b>${npc.name}</b> выручил(а) вас золотом из сбережений (+${loan} монет)!`;
+    log(msg);
+    playSound("coin");
+    showActionModal("Займ золота", msg, "🪙");
+  } else {
+    showActionModal("Отказ", `${npc.name} пока недостаточно доверяет вам для займов (нужно 75%+ отношений).`, "❌");
+  }
+  updateUI();
+  renderRelations();
+}
+
+function actionTalk(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  npc.relation = Math.min(100, npc.relation + 8);
+  if (npc.relation >= 60 && npc.status === "Знакомый") npc.status = "Друг";
+  const msg = `Вы тепло побеседовали с <b>${npc.name}</b> (+8% отношений).`;
+  log(msg);
+  playSound("click");
+  showActionModal("Беседа", msg, "💬");
+  updateUI();
+  renderRelations();
+}
+
+function actionGift(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  if (player.coins < 15) { showActionModal("Нехватка монет", "Нужно 15 монет!", "🪙"); return; }
+  player.coins -= 15;
+  npc.relation = Math.min(100, npc.relation + 20);
+  const msg = `Вы преподнесли ценный подарок для <b>${npc.name}</b> (+20%)!`;
+  log(msg);
+  playSound("coin");
+  showActionModal("Подарок", msg, "🎁");
+  updateUI();
+  renderRelations();
+}
+
+function actionInsult(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  npc.relation = Math.max(0, npc.relation - 30);
+  if (npc.relation <= 25) npc.status = "Заклятый враг";
+  const msg = `Вы жестоко оскорбили <b>${npc.name}</b>. Отношения испорчены!`;
+  log(msg);
+  playSound("click");
+  showActionModal("Ссора", msg, "🤬");
+  updateUI();
+  renderRelations();
+}
+
+function actionConfess(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  if (npc.relation >= 75) {
+    npc.status = "Пара";
+    const msg = `💖 <b>${npc.name}</b> ответила взаимностью на ваши чувства!`;
+    log(msg);
+    playSound("win");
+    showActionModal("Признание", msg, "💖");
+  } else {
+    npc.relation = Math.max(0, npc.relation - 10);
+    const msg = `💔 <b>${npc.name}</b>: "Давай пока останемся друзьями..."`;
+    log(msg);
+    playSound("click");
+    showActionModal("Отказ", msg, "💔");
+  }
+  updateUI();
+  renderRelations();
+}
+
+function actionMarry(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  if (npc.relation >= 88) {
+    npc.status = "Супруг/Супруга";
+    player.spouse = npc;
+    const msg = `💍 Колокола собора звонят! Вы и <b>${npc.name}</b> вступили в законный брак!`;
+    log(msg);
+    playSound("win");
+    showActionModal("Свадьба", msg, "💍");
+  } else {
+    showActionModal("Свадьба", `${npc.name} считает, что нужно еще лучше укрепить взаимное доверие.`, "💍");
+  }
+  updateUI();
+  renderRelations();
+}
+
+function actionHaveChild(npcId) {
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+  if (player.pregnancy) {
+    showActionModal("Беременность", "Беременность уже протекает! Ребенок появится через год.", "👶");
+    return;
+  }
+  player.pregnancy = { partnerName: npc.name };
+  const msg = `💖 Чудесная весть! Вы и <b>${npc.name}</b> ждете ребенка! Малыш появится на свет через 1 год.`;
+  log(msg);
+  playSound("win");
+  showActionModal("Пополнение", msg, "👶");
+  updateUI();
+  renderRelations();
+}
+
+function searchLostFamily(npcId) {
+  if (player.ap < 1) { showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤"); return; }
+  player.ap -= 1;
+
+  const npc = player.relations.find(r => r.id === npcId);
+  if (!npc) return;
+
+  if (Math.random() < 0.6) {
+    npc.isLost = false;
+    const msg = `🎉 <b>ПОИСКИ УВЕНЧАЛИСЬ УСПЕХОМ!</b> Вы нашли <b>${npc.name}</b> в одном из лагерей беженцев! Семья воссоединена!`;
+    log(msg);
+    playSound("win");
+    showActionModal("Воссоединение", msg, "🎉");
+  } else {
+    const msg = `Вы обошли таверны и лагеря, но вестей о <b>${npc.name}</b> пока нет. Продолжайте поиски!`;
+    log(msg);
+    playSound("click");
+    showActionModal("Поиски продолжаются", msg, "🔍");
+  }
+  updateUI();
+  renderRelations();
+}
+
+function meetStranger() {
+  const isMale = Math.random() > 0.5;
+  const list = isMale ? SYLLABLES.male : SYLLABLES.female;
+  const fName = list[Math.floor(Math.random() * list.length)];
+  const sName = SYLLABLES.surnames[Math.floor(Math.random() * SYLLABLES.surnames.length)];
+
+  const raceKeys = Object.keys(RACES);
+  const randRace = RACES[raceKeys[Math.floor(Math.random() * raceKeys.length)]].name;
+
+  const classes = ["Нищий", "Крестьянин", "Вольный наемник", "Купец", "Младший рыцарь", "Магистр школы", "Аристократ"];
+  const randClass = classes[Math.floor(Math.random() * classes.length)];
+
+  let baseCp = Math.floor(Math.random() * 2000) + 300;
+  if (randClass === "Младший рыцарь" || randClass === "Магистр школы") baseCp += 3500;
+
+  const newNpc = {
+    id: "npc_" + Date.now(),
+    name: `${fName} ${sName}`,
+    gender: isMale ? "male" : "female",
+    race: randRace,
+    age: Math.max(16, player.age + Math.floor(Math.random() * 8) - 4),
+    socialClass: randClass,
+    role: randClass,
+    cp: baseCp,
+    relation: Math.floor(Math.random() * 25) + 35,
+    status: "Знакомый",
+    isCanon: false,
+    isLost: false,
+    isDead: false
+  };
+
+  player.relations.push(newNpc);
+  const msg = `Вы повстречали: <b>${newNpc.name}</b> (${newNpc.race}, ${newNpc.age} лет, ${newNpc.socialClass}, БМ: ${baseCp.toLocaleString()}).`;
+  log(msg);
+  playSound("click");
+  showActionModal("Новое знакомство", msg, "👥");
+  renderRelations();
+  updateUI();
+}
+
+function ageUp() {
+  player.age++;
+  currentWorldYear++;
+
+  player.maxAp = getMaxAP(player.age);
+  player.ap = player.maxAp;
+  player.mana = player.maxMana;
+
+  let regen = 5;
+  if (player.familySeat) {
+    const seatObj = ESTATES.find(e => e.id === player.familySeat);
+    if (seatObj) regen = seatObj.hpRegen || 15;
+  }
+  player.hp = Math.min(player.maxHp, player.hp + regen);
+
+  if (player.relations && player.relations.length > 0) {
+    player.relations.forEach(npc => {
+      if (!npc.isDead) {
+        npc.age = (npc.age || 20) + 1;
+        if (npc.race === "Человек" && npc.age > 68 && Math.random() < 0.12) {
+          npc.isDead = true;
+          npc.status = "Покойный(ая)";
+          log(`🕯️ Ваш знакомый <b>${npc.name}</b> мирно скончался от глубокой старости в возрасте ${npc.age} лет.`);
+        }
+      }
+    });
+  }
+
+  generateYearlyGuildQuests();
+
+  if (player.estates && player.estates.length > 0) {
+    let passiveIncome = 0;
+    player.estates.forEach(estId => {
+      let est = ESTATES.find(e => e.id === estId);
+      if (est) passiveIncome += est.income;
+    });
+    player.coins += passiveIncome;
+    log(`💰 Доход от имений: <b>+${passiveIncome} монет</b>.`);
+  }
+
+  if (player.currentJob) {
+    const jData = getJobDataById(player.currentJob);
+    const curRank = jData?.ranks[player.jobRankIndex];
+    if (curRank) {
+      player.coins += curRank.salary;
+      log(`💼 Жалование по чину: <b>+${curRank.salary} монет</b>.`);
+    }
+  }
+
+  if (player.currentUndergroundJob) {
+    const uJob = UNDERGROUND_JOBS[player.currentRegionKey];
+    const curURank = uJob?.ranks[player.undergroundRankIndex];
+    if (curURank) {
+      if (Math.random() < curURank.risk) {
+        let fine = Math.min(player.coins, curURank.salary * 2);
+        player.coins -= fine;
+        player.hp = Math.max(10, player.hp - 25);
+        log(`🚨 <b>ОБЛАВА СТРАЖИ!</b> Ваша банда попала в засаду! Откуп: -${fine} монет, -25 HP.`);
+        playSound("death");
+      } else {
+        player.coins += curURank.salary;
+        log(`🗡️ Теневой синдикат выплатил куш: <b>+${curURank.salary} монет</b>.`);
+      }
+    }
+  }
+
+  if (player.castleUpgrades && player.castleUpgrades.includes("alchemy_lab")) {
+    player.potionsCount = (player.potionsCount || 0) + 2;
+    log(`🧪 Фамильная оранжерея произвела +2 целебных зелья.`);
+  }
+
+  if (player.pregnancy) {
+    const isMale = Math.random() > 0.5;
+    const list = isMale ? SYLLABLES.male : SYLLABLES.female;
+    const childName = list[Math.floor(Math.random() * list.length)];
+
+    let childRoll = Math.random();
+    let bonusMult = 1.0;
+    if (childRoll < 0.60) bonusMult = 1.15;
+    else if (childRoll > 0.90) bonusMult = 1.35;
+
+    const child = {
+      id: "child_" + Date.now(),
+      name: `${childName} ${player.surname}`,
+      gender: isMale ? "male" : "female",
+      age: 0,
+      birthYear: currentWorldYear,
+      cp: Math.round(500 * bonusMult),
+      role: bonusMult > 1.3 ? "Наследник рода (Вундеркинд ⭐)" : "Наследник рода",
+      relation: 100,
+      status: "Семья",
+      isFamily: true,
+      isChild: true,
+      isDead: false
+    };
+
+    player.children.push(child);
+    player.relations.push(child);
+    if (!player.appointedHeirId) player.appointedHeirId = child.id;
+    log(`🎉 <b>Пополнение в семье!</b> Родился ребенок — <b>${child.name}</b> (${child.gender === 'male' ? 'Сын' : 'Дочь'})!`);
+    playSound("win");
+    player.pregnancy = null;
+  }
+
+  if (currentWorldYear === CALAMITY_YEAR && !player.calamityTriggered) {
+    const calamityStory = STORY_ACTIVITIES.find(s => s.id === "story_10_calamity");
+    if (calamityStory) {
+      performStoryActivity("story_10_calamity");
+      return;
+    }
+  }
+
+  if (player.currentPowersSeat && Math.random() < 0.15) {
+    const seat = player.currentPowersSeat;
+    const myCp = calcCombatPower(player);
+    const challengerCp = Math.floor(myCp * (0.8 + Math.random() * 0.4));
+    triggerRandomEvent({
+      icon: "⚔️",
+      title: `Вызов Владыке #${seat} Семи Сил!`,
+      desc: `Амбициозный мастер клинка с БМ ${challengerCp.toLocaleString()} явился к вашему порогу, требуя отобрать ваше место на Монументе Семи Сил!`,
+      choices: [
+        {
+          text: "Принять бой насмерть и защитить свой титул!",
+          action: (p) => {
+            if (myCp >= challengerCp) {
+              p.swordGodExp += 40; p.squadFame += 50;
+              return "Вы сокрушили дерзкого претендента и защитили свой вечный титул в Семи Силах (+40 к Мечу, +50 к Славе)!";
+            } else {
+              p.currentPowersSeat = null;
+              p.hp = Math.max(15, p.hp - 50);
+              return "Претендент превзошел вас в яростной схватке! Вы лишились своего места на Монументе Семи Сил (-50 HP)!";
+            }
+          }
+        },
+        {
+          text: "Отказаться от поединка (Сдать титул)",
+          action: (p) => {
+            p.currentPowersSeat = null;
+            return "Вы добровольно уступили титул Семи Сил, сохранив жизнь и покой.";
+          }
+        }
+      ]
+    });
+    return;
+  }
+
+  if (player.age > (player.maxAge - 15) && player.trait?.id !== "god_mode") {
+    let decay = Math.floor(Math.random() * 10) + 5;
+    player.hp -= decay;
+    log(`Старость берет свое: ломота в суставах (-${decay} HP).`);
+  }
+
+  if (player.hp <= 0 || player.age >= player.maxAge) {
+    handleDeath(player.hp <= 0 ? "Смерть от ран и истощения сил" : "Мирная кончина от глубокой старости");
+    return;
+  }
+
+  const eligibleEvents = RANDOM_EVENTS.filter(e => player.age >= e.minAge && (!e.isRare || Math.random() < e.chance));
+  if (eligibleEvents.length > 0) {
+    const ev = eligibleEvents[Math.floor(Math.random() * eligibleEvents.length)];
+    triggerRandomEvent(ev);
+    return;
+  }
+
+  log("Год прошел в размеренных трудах и тренировках.");
+  playSound("click");
+  updateUI();
+}
+
+function triggerRandomEvent(eventObj) {
+  const iconEl = document.getElementById("event-icon");
+  const titleEl = document.getElementById("event-title");
+  const descEl = document.getElementById("event-desc");
+  const cBox = document.getElementById("event-choices");
+
+  if (iconEl) iconEl.innerText = eventObj.icon || "⚡";
+  if (titleEl) titleEl.innerText = eventObj.title;
+  if (descEl) descEl.innerText = eventObj.desc;
+  if (!cBox) return;
+
+  cBox.innerHTML = "";
+
+  eventObj.choices.forEach(ch => {
+    const btn = document.createElement("button");
+    btn.className = "event-choice-btn";
+    btn.innerText = ch.text;
+    btn.onclick = () => {
+      const outcome = ch.action(player);
+      const modal = document.getElementById("event-modal");
+      if (modal) modal.style.display = "none";
+      log(`<b>[Выбор]</b> ${outcome}`);
+      playSound("click");
+      showActionModal("Итог события", outcome, eventObj.icon || "⚡");
+      updateUI();
+      if (player.hp <= 0) handleDeath("Пал жертвой роковых обстоятельств года.");
+    };
+    cBox.appendChild(btn);
+  });
+
+  const modal = document.getElementById("event-modal");
+  if (modal) modal.style.display = "flex";
+}
+
+function getDynastyHistory() {
+  return JSON.parse(localStorage.getItem("bit_tensei_history") || "[]");
+}
+
+function recordAncestorToHistory(p, deathReason) {
+  let hist = getDynastyHistory();
+  hist.push({
+    gen: p.generation,
+    name: p.name,
+    gender: p.gender,
+    race: p.race,
+    peakCp: calcCombatPower(p),
+    maxAge: p.age,
+    deathReason: deathReason,
+    nobility: p.nobilityTitle,
+    coinsLeft: p.coins
+  });
+  localStorage.setItem("bit_tensei_history", JSON.stringify(hist));
+}
+
+function handleDeath(reason) {
+  playSound("death");
+  recordAncestorToHistory(player, reason);
+
+  const reasonEl = document.getElementById("death-reason");
+  if (reasonEl) reasonEl.innerText = `${reason} в возрасте ${player.age} лет.`;
+
+  const summaryBox = document.getElementById("death-summary");
+  if (summaryBox) {
+    summaryBox.innerHTML = `
+      <div style="background:#1c202b; padding:12px; border-radius:10px; font-size:12px; margin-bottom:12px;">
+        <div>🎖️ Имя: <b>${player.name}</b> (${player.gender === 'male' ? '♂️' : '♀️'}, ${player.race})</div>
+        <div>📅 Прожито: <b>${player.age} лет</b> (с ${currentWorldYear - player.age} по ${currentWorldYear} г.)</div>
+        <div>⚡ Пиковая БМ: <b>${calcCombatPower(player).toLocaleString()}</b></div>
+        <div>🪙 Оставлено золота: <b>${player.coins} монет</b></div>
+        <div>🏰 Владений рода: <b>${player.estates ? player.estates.length : 0}</b></div>
+        <div>👶 Наследников: <b>${player.children.length}</b></div>
+      </div>
+    `;
+  }
+
+  const heirsBlock = document.getElementById("heirs-list");
+  if (heirsBlock) {
+    heirsBlock.innerHTML = "";
+    const children = (player.children || []).filter(c => !c.isDead);
+
+    if (children.length > 0) {
+      const heirSelectionBlock = document.getElementById("heir-selection-block");
+      if (heirSelectionBlock) heirSelectionBlock.style.display = "block";
+
+      children.forEach(child => {
+        const childRealAge = Math.max(1, currentWorldYear - (child.birthYear || (currentWorldYear - 20)));
+        const isAppointed = (player.appointedHeirId === child.id);
+
+        const hCard = document.createElement("div");
+        hCard.className = "shop-item";
+        hCard.innerHTML = `
+          <div>
+            <b style="color:#fff;">${child.name}</b> ${isAppointed ? '<span class="badge-legendary">Завещание (100% казны) 👑</span>' : ''}
+            <div style="font-size:11px; color:var(--muted);">${child.gender === 'male' ? 'Сын' : 'Дочь'} • Возраст: <b>${childRealAge} лет</b> • ${child.role}</div>
+          </div>
+          <button style="background:#10b981;" onclick="continueAsHeir('${child.id}', ${childRealAge})">Играть 👑</button>
+        `;
+        heirsBlock.appendChild(hCard);
+      });
+    } else {
+      const heirSelectionBlock = document.getElementById("heir-selection-block");
+      if (heirSelectionBlock) heirSelectionBlock.style.display = "none";
+    }
+  }
+
+  const deathOverlay = document.getElementById("death-overlay");
+  if (deathOverlay) deathOverlay.style.display = "flex";
+}
+
+function continueAsHeir(childId, realAge) {
+  const child = player.children.find(c => c.id === childId);
+  dynastyGeneration++;
+
+  const isAppointed = (player.appointedHeirId === childId);
+  const inheritedCoins = isAppointed ? player.coins : Math.floor(player.coins * 0.7);
+
+  const raceObj = Object.values(RACES).find(r => r.name === player.race) || RACES.human;
+
+  const originMock = {
+    name: `Династия ${player.surname}`,
+    manaBonus: Math.floor(player.maxMana * 0.20),
+    swordGod: Math.floor(player.swordGodExp * 0.25),
+    coins: inheritedCoins,
+    int: 12,
+    log: `Вы продолжили славный род ${player.surname}. ${isAppointed ? 'По завещанию вам отошло 100% семейной казны!' : 'Семейное золото перешло к вам.'}`
+  };
+
+  const oldEstates = player.estates || [];
+  const oldSeat = player.familySeat;
+  const oldUpgrades = player.castleUpgrades || [];
+  const oldNobility = player.nobilityTitle;
+  const oldAsuraFaction = player.asuraFaction;
+  const oldLangs = player.languages || ["human"];
+
+  const deathOverlay = document.getElementById("death-overlay");
+  if (deathOverlay) deathOverlay.style.display = "none";
+  
+  initCharacter(child.name.split(" ")[0], player.surname, child.gender, raceObj, player.currentRegionKey, originMock, player.trait, player.familyStatus, realAge);
+  
+  player.estates = oldEstates;
+  player.familySeat = oldSeat;
+  player.castleUpgrades = oldUpgrades;
+  player.nobilityTitle = oldNobility;
+  player.asuraFaction = oldAsuraFaction;
+  player.languages = oldLangs;
+}
+
+function startNewDynasty() {
+  const newKarma = addReincarnationKarma();
+  const deathOverlay = document.getElementById("death-overlay");
+  if (deathOverlay) deathOverlay.style.display = "none";
+  dynastyGeneration = 1;
+  currentWorldYear = START_YEAR;
+  localStorage.removeItem("bit_tensei_save");
+  alert(`🌀 Душа вернулась в Колесо Сансары! Накоплена Карма ${newKarma}-го уровня.`);
+  showCreation();
+}
+
+function confirmReset() {
+  if (confirm("Завершить текущую жизнь и начать новую династию с чистого листа?")) {
+    startNewDynasty();
+  }
+}
+
 function generateYearlyGuildQuests() {
   const pRankIdx = ADVENTURER_RANKS.indexOf(player.guildRank);
   const pool = ALL_GUILD_QUESTS.filter(q => {
@@ -3101,10 +3216,6 @@ function generateYearlyGuildQuests() {
   const shuffled = [...pool].sort(() => 0.5 - Math.random());
   player.guildQuestsThisYear = shuffled.slice(0, 5);
 }
-
-// ------------------------------------------
-// 16. СОХРАНЕНИЕ И ЗАГРУЗКА
-// ------------------------------------------
 
 function saveGame() {
   if (!player) return;
@@ -3144,7 +3255,6 @@ function loadGame() {
   return false;
 }
 
-// Инициализация при старте
 if (!loadGame()) {
   showCreation();
 }
