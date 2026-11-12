@@ -7,7 +7,7 @@
   <title>Bit Tensei</title>
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
   
-  <!-- Защитные стили: предотвращают развал интерфейса при сбоях GitHub Pages -->
+  <!-- Защитные стили на случай задержки загрузки style.css -->
   <style>
     :root {
       --bg: #0b0c10; --card: #151821; --card-border: rgba(255, 255, 255, 0.08);
@@ -20,7 +20,7 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       margin: 0; padding: 12px; padding-bottom: 95px; user-select: none;
     }
-    #creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #hall-modal {
+    #creation-overlay, #death-overlay, #battle-modal, #event-modal, #birth-modal, #dungeon-modal {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(11, 12, 16, 0.98); z-index: 200; padding: 16px;
       overflow-y: auto; display: flex; flex-direction: column;
@@ -62,6 +62,11 @@
     </div>
 
     <div class="input-group">
+      <label>Благословение Рождения (Мико / Талант)</label>
+      <select id="select-trait"></select>
+    </div>
+
+    <div class="input-group">
       <label>Регион Рождения</label>
       <select id="select-region" onchange="updateOriginSelect()"></select>
     </div>
@@ -69,11 +74,6 @@
     <div class="input-group">
       <label>Родословная и Семья</label>
       <select id="select-origin"></select>
-    </div>
-
-    <div class="input-group">
-      <label>Врожденное Благословение</label>
-      <select id="select-trait"></select>
     </div>
 
     <button class="btn-main" onclick="confirmCreation()">✨ Воплотиться в новом теле</button>
@@ -91,13 +91,26 @@
     </div>
   </div>
 
-  <!-- Интерактивное событие с выбором (BitLife Event Modal) -->
+  <!-- Интерактивное событие с выбором (Драма, Хитогами, Случайности) -->
   <div id="event-modal" style="display: none;">
     <div class="event-sheet">
       <div class="event-icon" id="event-icon">⚡</div>
       <div class="event-title" id="event-title">Событие Года</div>
       <div class="event-desc" id="event-desc">Описание ситуации...</div>
       <div class="event-choices" id="event-choices"></div>
+    </div>
+  </div>
+
+  <!-- Отдельное модальное окно результатов вылазки в Лабиринт -->
+  <div id="dungeon-modal" style="display: none;">
+    <div class="birth-sheet" style="text-align: left;">
+      <div style="text-align: center;">
+        <div style="font-size: 36px; margin-bottom: 4px;" id="dung-modal-icon">🏛️</div>
+        <div class="modal-title" id="dung-modal-title">Исследование Лабиринта</div>
+        <div class="modal-sub" id="dung-modal-subtitle">Этаж пройден</div>
+      </div>
+      <div class="birth-card" id="dung-modal-body" style="font-size: 13px; line-height: 1.5;"></div>
+      <button class="btn-main" style="margin-top: 14px;" onclick="closeDungeonModal()">Осознать и продолжить</button>
     </div>
   </div>
 
@@ -112,8 +125,8 @@
       <div class="bar-bg"><div class="bar-fill bar-hp" id="battle-enemy-hp-bar" style="width: 100%;"></div></div>
       <div class="battle-log" id="battle-log">Схватка началась!</div>
       <div class="battle-actions">
-        <button onclick="combatAction('sword')">⚔️ Удар клинком</button>
-        <button onclick="combatAction('magic')">🔮 Магия стихий</button>
+        <button onclick="combatAction('sword')">⚔️ Клинок</button>
+        <button onclick="combatAction('magic')">🔮 Магия</button>
         <button onclick="combatAction('potion')">🧪 Зелье (+60 HP)</button>
         <button class="action-danger" onclick="combatAction('flee')">🏃 Отступить</button>
       </div>
@@ -132,16 +145,19 @@
     <button class="btn-main" style="margin-top: 15px;" onclick="startNewDynasty()">🔄 Новая душа (Карма Сансары)</button>
   </div>
 
-  <!-- Главная карточка персонажа -->
-  <div class="card">
-    <div class="header">
+  <!-- Главная карточка персонажа с четким разграничением блоков -->
+  <div class="card char-main-card">
+    <!-- Блок 1: Личность, статус и звук -->
+    <div class="char-header-section">
       <div>
-        <div style="display: flex; align-items: center; gap: 6px;">
-          <span id="char-gender-icon" style="font-size: 16px;">♂️</span>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span id="char-gender-icon" class="gender-pill">♂️</span>
           <div class="name" id="char-name">Имя Персонажа</div>
         </div>
-        <div class="region-badge" id="char-region">Регион</div>
-        <div id="char-trait" class="tag">Талант</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-top: 4px;">
+          <span class="region-badge" id="char-region">Регион</span>
+          <span id="char-trait" class="tag">Талант</span>
+        </div>
       </div>
       <div style="text-align: right;">
         <button id="btn-sound-toggle" class="btn-sound" onclick="toggleSound()">🔊 Звук: ВКЛ</button>
@@ -151,7 +167,9 @@
       </div>
     </div>
 
-    <!-- Боевая мощь и ранг мира -->
+    <div class="card-divider"></div>
+
+    <!-- Блок 2: Боевая мощь и ранг -->
     <div class="cp-banner">
       <div>
         <span style="font-size:11px; color:#c7d2fe;">⚡ БОЕВАЯ МОЩЬ:</span>
@@ -164,25 +182,35 @@
       </div>
     </div>
 
-    <!-- Демонические Глаза Киширики -->
-    <div class="eyes-panel" id="demon-eyes-panel">
-      <span class="eye-slot" id="eye-left">👁️ Левый глаз: Обычный</span>
-      <span class="eye-slot" id="eye-right">👁️ Правый глаз: Обычный</span>
+    <!-- Блок 3: Глаза демона и изученные языки -->
+    <div class="char-sub-panel">
+      <div class="eyes-panel" id="demon-eyes-panel">
+        <span class="eye-slot" id="eye-left">👁️ Левый: Обычный</span>
+        <span class="eye-slot" id="eye-right">👁️ Правый: Обычный</span>
+      </div>
+      <div class="lang-strip" id="char-languages-strip">
+        🗣️ <b>Языки:</b> <span id="char-languages-text">Человеческий</span>
+      </div>
     </div>
 
-    <!-- Травмы и недуги -->
+    <!-- Травмы -->
     <div id="injuries-banner" style="display:none; margin-top:6px;"></div>
 
-    <!-- Полоски параметров -->
-    <div class="bar-meta"><span>❤️ Здоровье</span><span id="hp-text">100/100</span></div>
-    <div class="bar-bg"><div class="bar-fill bar-hp" id="hp-bar" style="width: 100%;"></div></div>
+    <div class="card-divider"></div>
 
-    <div class="bar-meta" style="margin-top: 6px;">
-      <span>🔮 Сосуд Маны <small id="mana-status" style="color:var(--muted); font-size:10px;"></small></span>
-      <span id="mana-text">30/30</span>
+    <!-- Блок 4: Здоровье и Мана -->
+    <div class="bars-section">
+      <div class="bar-meta"><span>❤️ Здоровье</span><span id="hp-text">100/100</span></div>
+      <div class="bar-bg"><div class="bar-fill bar-hp" id="hp-bar" style="width: 100%;"></div></div>
+
+      <div class="bar-meta" style="margin-top: 8px;">
+        <span>🔮 Сосуд Маны <small id="mana-status" style="color:var(--muted); font-size:10px;"></small></span>
+        <span id="mana-text">30/30</span>
+      </div>
+      <div class="bar-bg"><div class="bar-fill bar-mana" id="mana-bar" style="width: 100%;"></div></div>
     </div>
-    <div class="bar-bg"><div class="bar-fill bar-mana" id="mana-bar" style="width: 100%;"></div></div>
 
+    <!-- Блок 5: Стили боя и характеристики -->
     <div class="stats">
       <div class="stat">🧙 Магия: <b id="magic">Новичок</b></div>
       <div class="stat">🪙 Золото: <b id="coins">0</b></div>
@@ -192,31 +220,42 @@
       <div class="stat">📚 Знания: <b id="intellect">10</b></div>
     </div>
     
-    <!-- Бейджи работы, статуса интриг и фракций -->
-    <div id="job-badge-container" style="margin-top: 6px;"></div>
-    <div id="politics-badge-container" style="margin-top: 4px;"></div>
-    <div id="faction-badge-container" style="margin-top: 4px;"></div>
+    <!-- Блок 6: Социальный статус и работа (исключительно на русском) -->
+    <div class="char-badges-grid">
+      <div id="job-badge-container"></div>
+      <div id="politics-badge-container"></div>
+      <div id="faction-badge-container"></div>
+    </div>
     <div id="calamity-status-banner" style="display:none; margin-top: 6px;"></div>
   </div>
 
   <!-- ВКЛАДКА 1: ПЕРСОНАЖ / ЖИЗНЬ -->
   <div id="tab-character" class="tab-content active">
     <div class="log-box" id="logs"></div>
+    
     <button class="btn-main" onclick="ageUp()">⏳ Прожить 1 год (Восстановить силы)</button>
     <button class="btn-secondary" onclick="confirmReset()">🔄 Сдаться и переродиться</button>
+
+    <!-- Сюжетный блок внизу Жизни с уведомлением -->
+    <div class="story-life-box" style="margin-top: 14px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+        <span class="section-title" style="margin: 0;">📜 Сюжетные Вехи Судьбы</span>
+        <span id="story-notify-badge" class="badge-mythic pulse" style="display:none; font-size:10px;">⚡ Доступна веха!</span>
+      </div>
+      <div id="life-story-container"></div>
+    </div>
   </div>
 
-  <!-- ВКЛАДКА 2: ДЕЛА, СЮЖЕТ И КАРЬЕРА -->
+  <!-- ВКЛАДКА 2: ДЕЛА, СЛУЖБА И ОБУЧЕНИЕ -->
   <div id="tab-activities" class="tab-content">
     <div class="sub-nav">
-      <button class="sub-tab-btn active" onclick="setActivityCategory('story', this)">📖 Сюжет (Эпоха)</button>
+      <button class="sub-tab-btn active" onclick="setActivityCategory('all', this)">🌟 Все дела</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('job', this)">💼 Служба и Работа</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('all', this)">🌟 Все дела</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('childhood', this)">👶 Детство</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('magic', this)">🔮 Магия</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('combat', this)">⚔️ Бой</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('school', this)">🎓 Академия</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('life', this)">🛠️ Быт</button>
+      <button class="sub-tab-btn" onclick="setActivityCategory('life', this)">🛠️ Быт & Таверна</button>
     </div>
     <div id="activities-container"></div>
   </div>
@@ -283,7 +322,7 @@
     <div class="section-title">🏆 Интерактивный Монумент Семи Великих Сил Мира</div>
     <div class="powers-monument" id="powers-monument-list"></div>
 
-    <div class="section-title" style="margin-top: 16px;">🏛️ Покорение Лабиринтов (Шанс легендарного лута)</div>
+    <div class="section-title" style="margin-top: 16px;">🏛️ Покорение Лабиринтов</div>
     <div id="dungeon-container"></div>
 
     <div class="section-title" style="margin-top: 16px;">📜 Контракты Гильдии на Этот Год</div>
@@ -292,11 +331,11 @@
 
   <!-- ВКЛАДКА 5: МИР, ДИНАСТИЯ И ПОЛИТИКА -->
   <div id="tab-relations" class="tab-content">
-    <!-- Подвкладки раздела Мир -->
     <div class="sub-nav">
       <button class="sub-tab-btn active" onclick="setWorldSubTab('relations', this)">👥 Связи & Поиск</button>
       <button class="sub-tab-btn" onclick="setWorldSubTab('politics', this)">👑 Интриги Асуры</button>
       <button class="sub-tab-btn" onclick="setWorldSubTab('tree', this)">🌳 Древо Рода</button>
+      <button class="sub-tab-btn" onclick="setWorldSubTab('languages', this)">🗣️ Языки Мира</button>
       <button class="sub-tab-btn" onclick="setWorldSubTab('travel', this)">🌍 Путешествия</button>
       <button class="sub-tab-btn" onclick="setWorldSubTab('schools', this)">🏛️ Академии</button>
     </div>
@@ -308,7 +347,7 @@
       <div id="relations-list"></div>
     </div>
 
-    <!-- 2. Политика и интриги королевства Асура -->
+    <!-- 2. Политика и интриги Асуры -->
     <div id="world-sub-politics" style="display: none;">
       <div class="section-title">👑 Борьба за Престол Королевства Асура</div>
       <div id="politics-container"></div>
@@ -320,15 +359,21 @@
       <div id="dynasty-tree-container"></div>
     </div>
 
-    <!-- 4. Путешествия -->
+    <!-- 4. Изучение языков -->
+    <div id="world-sub-languages" style="display: none;">
+      <div class="section-title">🗣️ Языки Шестиликого Мира</div>
+      <div id="languages-container"></div>
+    </div>
+
+    <!-- 5. Путешествия -->
     <div id="world-sub-travel" style="display: none;">
       <div class="section-title">🌍 Путешествия по Шестиликому Миру (1 год пути)</div>
       <div id="world-travel-list"></div>
     </div>
 
-    <!-- 5. Академии -->
+    <!-- 6. Академии -->
     <div id="world-sub-schools" style="display: none;">
-      <div class="section-title">🏛️ Академии и Университеты Магии/Меча</div>
+      <div class="section-title">🏛️ Академии и Университеты</div>
       <div id="schools-list"></div>
     </div>
   </div>
@@ -357,6 +402,7 @@
     </button>
   </div>
 
+  <script src="./music.js"></script>
   <script src="./data.js"></script>
   <script src="./app.js"></script>
 </body>
