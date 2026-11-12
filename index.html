@@ -32,7 +32,7 @@
 </head>
 <body>
 
-  <!-- Окно создания персонажа (со страховочными значениями по умолчанию) -->
+  <!-- Окно создания персонажа (со страховочными базовыми значениями) -->
   <div id="creation-overlay">
     <div class="modal-title">🔮 Колесо Сансары</div>
     <div class="modal-sub">Сотворите судьбу для воплощения в Шестиликом Мире</div>
@@ -79,7 +79,7 @@
     <div class="input-group">
       <label>Статус и Сословие Семьи (Зависит от региона)</label>
       <select id="select-family-status">
-        <option value="commoner">Крестьяне и ремесленники</option>
+        <option value="asura_farmer">Пшеничные фермеры Фитоа</option>
       </select>
     </div>
 
@@ -142,7 +142,7 @@
     </div>
   </div>
 
-  <!-- Модальное окно битвы (Дуэли, Семь Сил, Монстры) -->
+  <!-- Модальное окно битвы (Дуэли, Семь Сил, Монстры, Хитогами) -->
   <div id="battle-modal" style="display: none;">
     <div class="battle-sheet">
       <div class="battle-header">
@@ -197,7 +197,7 @@
 
     <div class="card-divider"></div>
 
-    <!-- Боевая мощь и Живая Слава -->
+    <!-- Боевая мощь -->
     <div class="cp-banner">
       <div>
         <span style="font-size:11px; color:#c7d2fe;">⚡ БОЕВАЯ МОЩЬ:</span>
@@ -210,9 +210,9 @@
       </div>
     </div>
 
-    <!-- Живая Слава Бардов -->
+    <!-- Молва Бардов с 0 лет -->
     <div id="bard-fame-strip" class="bard-fame-strip">
-      🪕 <span id="bard-fame-text">О вас пока шепчутся лишь в узких кругах...</span>
+      🪕 <span id="bard-fame-text">Младенец в колыбели, барды ещё не знают вашего имени...</span>
     </div>
 
     <!-- Глаза демона и языки -->
@@ -259,6 +259,7 @@
     <!-- Бейджи статуса -->
     <div class="char-badges-grid">
       <div id="estate-residence-badge"></div>
+      <div id="powers-seat-badge"></div>
       <div id="job-badge-container"></div>
       <div id="politics-badge-container"></div>
       <div id="faction-badge-container"></div>
@@ -286,12 +287,14 @@
   <div id="tab-activities" class="tab-content">
     <div class="sub-nav">
       <button class="sub-tab-btn active" onclick="setActivityCategory('all', this)">🌟 Все дела</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('job', this)">💼 Законная Служба</button>
+      <button class="sub-tab-btn" onclick="setActivityCategory('job', this)">💼 Служба Короны</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('underground', this)">🗡️ Теневое Подполье</button>
-      <button class="sub-tab-btn" onclick="setActivityCategory('childhood', this)">👶 Детство</button>
+      <button class="sub-tab-btn" onclick="setActivityCategory('childhood', this)">👶 Младенчество & Детство</button>
+      <button class="sub-tab-btn" onclick="setActivityCategory('youth', this)">🧑 Юность</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('magic', this)">🔮 Магия</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('combat', this)">⚔️ Бой</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('school', this)">🎓 Академия</button>
+      <button class="sub-tab-btn" onclick="setActivityCategory('elder', this)">🧓 Зрелость & Старость</button>
       <button class="sub-tab-btn" onclick="setActivityCategory('life', this)">🛠️ Быт & Таверна</button>
     </div>
     <div id="activities-container"></div>
@@ -315,24 +318,24 @@
       </div>
     </div>
 
-    <!-- Фамильное Завещание Рода -->
+    <!-- Фамильное Завещание -->
     <div class="section-title" style="margin-top: 14px;">📜 Фамильное Завещание и Наследник</div>
     <div id="testament-container"></div>
 
-    <!-- Фамильный Замок и Управление -->
+    <!-- Замок и поместья -->
     <div class="section-title" style="margin-top: 14px;">🏰 Фамильный Замок, Склеп Предков и Поместья</div>
     <div id="family-castle-container"></div>
     <div id="estate-container" style="margin-top: 8px;"></div>
 
-    <!-- Торговые Караваны и Теневой Бизнес -->
+    <!-- Караваны -->
     <div class="section-title" style="margin-top: 14px;">🐪 Торговые Караваны и Семейный Бизнес</div>
     <div id="caravans-container"></div>
 
-    <!-- Рюкзак с возможностью продажи ненужных вещей -->
+    <!-- Рюкзак с продажей -->
     <div class="section-title" style="margin-top: 14px;">🎒 Рюкзак Инвентаря (Надеть / Продать торговцам)</div>
     <div id="inventory-list"></div>
 
-    <!-- Великий Рынок -->
+    <!-- Рынок -->
     <div class="section-title" style="margin-top: 14px;">🛒 Великий Рынок Артефактов и Оружия</div>
     <div class="sub-nav" style="margin-bottom: 6px;">
       <button class="sub-tab-btn active" onclick="setShopCategory('all', this)">Все товары</button>
@@ -343,8 +346,9 @@
     <div id="shop-list"></div>
   </div>
 
-  <!-- ВКЛАДКА 4: БИТВЫ, ОТРЯД И СЕМЬ ВЕЛИКИХ СИЛ -->
+  <!-- ВКЛАДКА 4: БИТВЫ, МОНУМЕНТ СИЛ И ЭНДГЕЙМ ХИТОГАМИ -->
   <div id="tab-guild" class="tab-content">
+    <!-- Боевой Отряд -->
     <div class="card" style="margin-bottom:10px; background:#181b26;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
@@ -355,6 +359,7 @@
       <div id="squad-members-list" style="margin-top:8px;"></div>
     </div>
 
+    <!-- Доска Гильдии -->
     <div class="card" style="margin-bottom:10px; background:#181b26;">
       <div style="display:flex; justify-content:space-between; align-items:center;">
         <div>
@@ -365,8 +370,16 @@
       </div>
     </div>
 
-    <div class="section-title">🏆 Интерактивный Монумент Семи Великих Сил Мира</div>
-    <div class="powers-monument" id="powers-monument-list"></div>
+    <!-- Цепочка вызова Семи Великих Сил -->
+    <div class="section-title">
+      <span>🏆 Монумент Семи Великих Сил Мира</span>
+      <span id="seven-powers-notify" class="badge-mythic pulse" style="display:none; font-size:9px; margin-left:6px;">⚡ Доступен поиск!</span>
+    </div>
+    <div id="seven-powers-quest-container"></div>
+    <div class="powers-monument" id="powers-monument-list" style="margin-top: 8px;"></div>
+
+    <!-- Эндгейм: Прорыв в Белое Измерение -->
+    <div id="void-hitogami-section" style="margin-top: 16px;"></div>
 
     <div class="section-title" style="margin-top: 16px;">🏛️ Исследование Лабиринтов</div>
     <div id="dungeon-container"></div>
@@ -436,7 +449,7 @@
     </div>
   </div>
 
-  <!-- Нижняя панель навигации (Имущество) -->
+  <!-- Нижняя панель навигации -->
   <div class="bottom-nav">
     <button class="nav-item active" onclick="switchTab('character')">
       <span class="icon">👤</span>
