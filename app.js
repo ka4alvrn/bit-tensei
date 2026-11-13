@@ -1,1749 +1,742 @@
-const tg = window.Telegram?.WebApp;
-if (tg) { tg.ready(); tg.expand(); }
+const START_YEAR = 407;
+const CALAMITY_YEAR = 417;
 
-let worldState = {
-  currentWorldYear: START_YEAR,
-  calamityOccurred: false,
-  sevenPowers: cloneDefaultPowers(),
-  chronicles: [],
-  dynastyHistory: []
+const SWORD_RANKS = ["Нет", "Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог ⚔️"];
+const MAGIC_RANKS = ["Новичок", "Рядовой 🥉", "Святой 🌟", "Королевский 👑", "Император ⚡", "Бог 🔮"];
+const ADVENTURER_RANKS = ["F", "E", "D", "C", "B", "A", "S"];
+const ADVENTURER_REQ = { F: 0, E: 30, D: 80, C: 180, B: 380, A: 750, S: 1400 };
+
+// Плотная шкала БМ: от 100 у младенца до ~100,000 у Богов и эндгейма
+const GENERATION_CP_CAPS = { 1: 8500, 2: 22000, 3: 48000, 4: 80000, 5: 120000 };
+
+const WORLD_ERAS = [
+  { maxYear: 416, name: "Мир перед Бурей", desc: "Спокойное десятилетие перед Катаклизмом Маны." },
+  { maxYear: 429, name: "Смута Катаклизма", desc: "Последствия телепортации Фитоа и скитания выживших." },
+  { maxYear: 499, name: "Эпоха Восстановления", desc: "Расцвет Академии Раноа и тайная борьба Апостолов." },
+  { maxYear: 599, name: "VI век: Век Затаившихся Богов", desc: "Скрытые интриги Белого Пространства и передел тронов." },
+  { maxYear: 699, name: "VII век: Эпоха Маготехники", desc: "Небесные корабли, древние руны и расцвет магии." },
+  { maxYear: 9999, name: "VIII+ век: Хроники Вечных Династий", desc: "Легендарная эра бессмертных родов и архимагов." }
+];
+
+const REGION_FAMILY_STATUSES = {
+  asura: [
+    { id: "asura_slums", name: "Нищие трущоб Арса", coins: 3, hp: 15, northGod: 10, desc: "Выживание на улицах (+15 HP, +10 Севера)." },
+    { id: "asura_farmer", name: "Фермеры Фитоа", coins: 15, hp: 25, desc: "Дом среди золотых полей (+25 HP)." },
+    { id: "asura_knight", name: "Рыцари Асуры", coins: 50, swordGod: 15, int: 4, desc: "Воинская честь (+50🪙, +15 Мечу)." },
+    { id: "asura_high_noble", name: "Высшая знать Асуры", coins: 180, int: 14, influence: 35, desc: "Мраморные залы (+180🪙, +35 влияния, +14 Знаний)." }
+  ],
+  ranoa: [
+    { id: "ranoa_trapper", name: "Охотники Севера", coins: 12, hp: 30, northGod: 12, desc: "Закалка льдом (+30 HP, +12 Севера)." },
+    { id: "ranoa_artificer", name: "Артефакторы Шарии", coins: 45, int: 10, manaBonus: 20, desc: "Мастерская (+45🪙, +20 маны)." },
+    { id: "ranoa_prof_dynasty", name: "Профессора Академии", coins: 120, int: 18, manaBonus: 45, desc: "Библиотеки (+120🪙, +45 маны)." }
+  ],
+  demon: [
+    { id: "demon_outcast", name: "Парии пустошей", coins: 3, hp: 40, northGod: 15, desc: "Среди монстров (+40 HP, +15 Севера)." },
+    { id: "demon_nomad_clan", name: "Кочевой клан демонов", coins: 25, hp: 45, swordGod: 20, desc: "Стойкость (+45 HP, +20 Мечу)." },
+    { id: "demon_lord_blood", name: "Потомки Демон-Лордов", coins: 90, hp: 55, manaBonus: 65, desc: "Кровь владык (+65 маны, +55 HP)." }
+  ],
+  great_forest: [
+    { id: "forest_orphan", name: "Лесные подкидыши", coins: 5, hp: 30, northGod: 15, desc: "Жизнь на кронах (+30 HP)." },
+    { id: "forest_dorudia_hunter", name: "Стая Дорудиа", coins: 22, hp: 35, swordGod: 22, desc: "Звериное чутьё (+35 HP, +22 Мечу)." },
+    { id: "forest_chieftain_family", name: "Род Вождя Леса", coins: 85, hp: 45, swordGod: 30, int: 10, desc: "Потомки зверей (+85🪙, +30 Мечу)." }
+  ],
+  milis: [
+    { id: "milis_pilgrim", name: "Паломники Древа", coins: 10, hp: 20, int: 8, desc: "Молитвы (+20 HP, +8 Знаний)." },
+    { id: "milis_merchant_house", name: "Купеческий дом", coins: 95, int: 14, desc: "Торговля (+95🪙, +14 Знаний)." },
+    { id: "milis_templar_dynasty", name: "Рыцари Храма", coins: 140, swordGod: 20, waterGod: 20, int: 10, desc: "Белый доспех (+140🪙, +20 Воде и Мечу)." }
+  ],
+  begaritt: [
+    { id: "desert_pariah", name: "Изгои барханов", coins: 5, hp: 35, northGod: 18, desc: "Выживание (+35 HP, +18 Севера)." },
+    { id: "desert_nomad_caravan", name: "Кочевники оазисов", coins: 35, hp: 30, northGod: 20, desc: "Караваны (+35🪙, +20 Севера)." },
+    { id: "desert_labyrinth_dynasty", name: "Кладоискатели", coins: 110, swordGod: 22, int: 12, manaBonus: 25, desc: "Древние карты (+110🪙, +22 Мечу)." }
+  ]
+};
+const FAMILY_STATUSES = REGION_FAMILY_STATUSES.asura;
+
+const RACES = {
+  human: { id: "human", name: "Человек", maxAge: 75, learnMod: 1.35, desc: "Учатся стилям на 35% быстрее всех остальных рас.", bonus: { baseMana: 25, hp: 0, int: 5, coins: 15, manaMod: 1.0 } },
+  demon: { id: "demon", name: "Демон", maxAge: 220, learnMod: 1.0, desc: "Огромный сосуд маны и долгий век.", bonus: { baseMana: 65, hp: 35, int: 2, coins: 5, manaMod: 1.5 } },
+  beast: { id: "beast", name: "Зверочеловек", maxAge: 95, learnMod: 1.1, desc: "Звериный инстинкт в ближнем бою.", bonus: { baseMana: 20, hp: 25, swordGod: 18, coins: 8, manaMod: 0.9 } },
+  elf: { id: "elf", name: "Эльф / Полуэльф", maxAge: 320, learnMod: 0.95, desc: "Долголетие, мудрость и сродство с маной.", bonus: { baseMana: 50, hp: -5, int: 12, coins: 15, manaMod: 1.35 } },
+  speld: { id: "speld", name: "Спард", maxAge: 180, learnMod: 1.05, desc: "Алый камень во лбу, прирождённые бойцы.", bonus: { baseMana: 28, hp: 40, swordGod: 24, northGod: 15, coins: 5, manaMod: 1.0 } },
+  dwarf: { id: "dwarf", name: "Гном / Дворф", maxAge: 130, learnMod: 1.0, desc: "Крепкое тело и мастерство ковки.", bonus: { baseMana: 15, hp: 38, northGod: 18, coins: 25, manaMod: 0.85 } }
 };
 
-let player = null;
-let dynastyGeneration = 1;
-let currentOpenedNpcId = null;
-let currentBattle = null;
-let currentActivityCategory = "all";
-let currentShopCategory = "all";
-let creationGender = "male";
-let activeDungeon = null;
-let confirmCallback = null;
+const LANGUAGES = {
+  human: { id: "human", name: "Человеческий язык", desc: "Общий язык Асуры, Раноа и Милиса." },
+  demon: { id: "demon", name: "Демонический язык", desc: "Скидка 20% на рынке Демонического континента + обелиски." },
+  beast: { id: "beast", name: "Звериный язык", desc: "+25% к отношениям со зверолюдьми и дипломатия Леса." },
+  god_fighter: { id: "god_fighter", name: "Язык Бога Бойцов", desc: "Доступ к древним боевым свиткам и Скрижали." },
+  dragon: { id: "dragon", name: "Язык Драконьего Племени", desc: "Руны телепортации и Плита Драконьего Владыки." }
+};
 
-function cloneDefaultPowers() {
-  return SEVEN_GREAT_POWERS.map(p => ({ ...p, holderType: "npc" }));
-}
+const TRAITS = [
+  { id: "healthy", name: "Стальное здоровье", rarity: "common", weight: 20, hp: 35, manaBonus: 0, growthMod: 1.0, desc: "+35 HP и стойкость к болезням." },
+  { id: "curious", name: "Любознательность", rarity: "common", weight: 20, int: 8, manaBonus: 5, growthMod: 1.1, desc: "+8 Знаний, книги и лекции дают +50% опыта." },
+  { id: "water_aff", name: "Сродство с Водой 💧", rarity: "rare", weight: 8, manaBonus: 30, waterGod: 16, growthMod: 1.35, desc: "+30 маны, бонус к стилю Воды." },
+  { id: "fire_aff", name: "Сродство с Огнем 🔥", rarity: "rare", weight: 8, manaBonus: 30, swordGod: 16, growthMod: 1.35, desc: "+30 маны, взрывной выпад меча." },
+  { id: "silent_cast", name: "Беззвучный каст 🔮", rarity: "epic", weight: 5, manaBonus: 60, growthMod: 1.8, desc: "+60 маны, магия в бою вдвое дешевле и на 30% сильнее!" },
+  { id: "laplace_factor", name: "Истинный Фактор Лапласа ✨", rarity: "mythic", weight: 1, manaBonus: 180, growthMod: 2.8, desc: "Огромный сосуд маны. Каналы души не затвердевают после 10 лет!" },
+  { id: "miko_strength", name: "🌟 Мико: Чудовищная Сила", rarity: "mythic", weight: 2, hp: 160, swordGod: 45, northGod: 45, manaBonus: -10, growthMod: 1.6, desc: "Стальное тело как у Занобы (+160 HP, +45 к Мечу и Северу)." },
+  { id: "miko_memory", name: "🌟 Мико: Взор Памяти", rarity: "mythic", weight: 2, int: 25, manaBonus: 80, growthMod: 1.9, desc: "Абсолютная память души, +80 маны, +25 Знаний." },
+  { id: "miko_healing", name: "🌟 Мико: Источник Жизни", rarity: "mythic", weight: 2, hp: 100, manaBonus: 55, waterGod: 30, growthMod: 1.55, desc: "Кровь исцеления: +25 HP регенерации каждый год." },
+  { id: "god_mode", name: "⚡ ЧИТ-РЕЖИМ: Истинный Творец", rarity: "mythic", weight: 0, hp: 9999, manaBonus: 9999, swordGod: 1500, waterGod: 1500, northGod: 1500, int: 500, coins: 99999, growthMod: 6.0, desc: "Режим Бога: бесконечная мощь и казна." }
+];
 
-const $ = (id) => document.getElementById(id);
-const setText = (id, txt) => { const el = $(id); if (el) el.innerText = txt; };
+const DEMON_EYES = {
+  foresight: { id: "foresight", name: "Глаз Предвидения 👁️", color: "#38bdf8", desc: "+35% уклонения в бою, +1,800 БМ.", cp: 1800 },
+  mana_sight: { id: "mana_sight", name: "Глаз Маны 🔮", color: "#c084fc", desc: "Иммунитет к ловушкам лабиринтов, +1,500 БМ.", cp: 1500 },
+  appraisal: { id: "appraisal", name: "Глаз Оценки 📜", color: "#fbbf24", desc: "+30% урона по слабым местам врага, +1,400 БМ.", cp: 1400 },
+  clarity: { id: "clarity", name: "Глаз Дальнего Взора 🎯", color: "#34d399", desc: "+15% крита и 100% точность, +1,200 БМ.", cp: 1200 }
+};
 
-function getWorldEra(year) {
-  return WORLD_ERAS.find(e => year <= e.maxYear) || WORLD_ERAS[WORLD_ERAS.length - 1];
-}
+const REGIONAL_JOBS = {
+  asura: [
+    { id: "asura_guard", name: "Королевская Гвардия Асуры", ranks: [
+      { title: "Новобранец гарнизона", salary: 10, minAge: 14, minSword: 15, desc: "Патрулирование рынков." },
+      { title: "Страж ворот Роа", salary: 22, minAge: 16, minSword: 40, desc: "Охрана ворот." },
+      { title: "Рыцарь Первого круга", salary: 55, minAge: 20, minSword: 95, desc: "Эскорт знати." },
+      { title: "Капитан Гвардии", salary: 130, minAge: 25, minSword: 220, desc: "Батальон Арса." },
+      { title: "Лорд-Командующий Асуры", salary: 280, minAge: 32, minSword: 450, desc: "Высший военный чин." }
+    ]},
+    { id: "asura_bureaucrat", name: "Королевское Казначейство", ranks: [
+      { title: "Переписчик свитков", salary: 12, minAge: 14, minInt: 15, desc: "Налоговые свитки." },
+      { title: "Податной инспектор", salary: 28, minAge: 18, minInt: 40, desc: "Сбор податей." },
+      { title: "Аудитор Короны", salary: 70, minAge: 24, minInt: 80, desc: "Ревизия имений." },
+      { title: "Главный Казначей", salary: 190, minAge: 30, minInt: 150, desc: "Золотой запас." }
+    ]},
+    { id: "asura_court_mage", name: "Придворная Коллегия Магов", ranks: [
+      { title: "Адепт барьеров", salary: 18, minAge: 15, minMagic: 40, desc: "Глифы дворца." },
+      { title: "Магистр эскорта", salary: 75, minAge: 21, minMagic: 120, desc: "Стража монархов." },
+      { title: "Архимаг Совета", salary: 220, minAge: 28, minMagic: 300, desc: "Верховный маг." }
+    ]}
+  ],
+  ranoa: [
+    { id: "ranoa_researcher", name: "Институт Академии Шарии", ranks: [
+      { title: "Лаборант алхимика", salary: 14, minAge: 13, minMagic: 25, desc: "Кристаллы маны." },
+      { title: "Ассистент кафедры", salary: 35, minAge: 17, minMagic: 60, desc: "Магические круги." },
+      { title: "Профессор боевой магии", salary: 90, minAge: 22, minMagic: 150, desc: "Высшие стихии." },
+      { title: "Декан Академии Шарии", salary: 250, minAge: 30, minMagic: 340, desc: "Глава коллегии Севера." }
+    ]},
+    { id: "ranoa_winter_scout", name: "Ледяной Дозор Севера", ranks: [
+      { title: "Следопыт снегов", salary: 14, minAge: 14, minNorth: 25, desc: "Патруль буранов." },
+      { title: "Охотник на бегемотов", salary: 55, minAge: 19, minSword: 90, desc: "Защита караванов." },
+      { title: "Капитан Рубежа", salary: 180, minAge: 27, minSword: 260, desc: "Гарнизоны Севера." }
+    ]}
+  ],
+  milis: [
+    { id: "milis_templar", name: "Орден Рыцарей Милиса", ranks: [
+      { title: "Послушник Собора", salary: 10, minAge: 13, minInt: 12, desc: "Служба в храме." },
+      { title: "Рыцарь-Храмовник", salary: 32, minAge: 17, minSword: 60, desc: "Охрана паломников." },
+      { title: "Инквизитор Веры", salary: 85, minAge: 23, minSword: 160, desc: "Охота на еретиков." },
+      { title: "Паладин Белого Древа", salary: 230, minAge: 30, minSword: 380, desc: "Верховный меч." }
+    ]},
+    { id: "milis_healer_seminary", name: "Госпиталь Святого Ранга", ranks: [
+      { title: "Брат милосердия", salary: 15, minAge: 13, minMagic: 25, desc: "Уход за ранеными." },
+      { title: "Священник-целитель", salary: 55, minAge: 18, minMagic: 95, desc: "Снятие проклятий." },
+      { title: "Епископ Исцеления", salary: 195, minAge: 28, minMagic: 280, desc: "Высшее исцеление." }
+    ]}
+  ],
+  demon: [
+    { id: "demon_hunter", name: "Охотники Пустошей", ranks: [
+      { title: "Сборщик чешуи", salary: 12, minAge: 12, minSword: 12, desc: "Кости чудовищ." },
+      { title: "Загонщик виверн", salary: 34, minAge: 16, minSword: 55, desc: "Охота на ящеров." },
+      { title: "Охотник Чёрных Руин", salary: 85, minAge: 21, minSword: 140, desc: "Гнёзда демонов." },
+      { title: "Палач Пустошей", salary: 210, minAge: 28, minSword: 350, desc: "Легендарный охотник." }
+    ]}
+  ],
+  great_forest: [
+    { id: "forest_ranger", name: "Дозор Клана Дорудиа", ranks: [
+      { title: "Дозорный ветвей", salary: 11, minAge: 12, minSword: 15, desc: "Охрана крон." },
+      { title: "Следопыт чащи", salary: 32, minAge: 16, minSword: 55, desc: "Сезон дождей." },
+      { title: "Хранитель Древа", salary: 90, minAge: 22, minSword: 150, desc: "Защита святилищ." },
+      { title: "Первый Клинок Леса", salary: 220, minAge: 30, minSword: 380, desc: "Лидер воинов леса." }
+    ]}
+  ],
+  begaritt: [
+    { id: "desert_caravan", name: "Гильдия Караван-Баши", ranks: [
+      { title: "Погонщик ящеров", salary: 14, minAge: 14, minInt: 12, desc: "Доставка воды." },
+      { title: "Страж каравана", salary: 38, minAge: 18, minSword: 70, desc: "Отражение налётов." },
+      { title: "Проводник Лабиринтов", salary: 95, minAge: 24, minInt: 80, desc: "Древние залы." },
+      { title: "Песчаный Барон", salary: 260, minAge: 32, minInt: 180, desc: "Владелец оазисов." }
+    ]}
+  ]
+};
 
-// =========================================================================
-// ЗВУК (ИНТЕГРАЦИЯ С music.js) И TELEGRAM UX
-// =========================================================================
-function playSound(type) {
-  if (typeof audioEngine === "undefined") return;
-  const map = { sword: "hit", death: "hit", calamity: "hit", win: "levelup" };
-  audioEngine.playSFX(map[type] || type);
-}
+const UNDERGROUND_JOBS = {
+  asura: { id: "underground_asura", name: "🗡️ Теневой Синдикат Роа", ranks: [
+    { title: "Карманник трущоб", salary: 22, minAge: 13, minNorth: 15, risk: 0.15 },
+    { title: "Скупщик реликвий", salary: 60, minAge: 17, minNorth: 40, risk: 0.22 },
+    { title: "Теневой ликвидатор", salary: 160, minAge: 22, minSword: 150, risk: 0.30 },
+    { title: "Глава Теней Асуры", salary: 420, minAge: 28, minSword: 320, risk: 0.35 }
+  ]},
+  ranoa: { id: "underground_ranoa", name: "🔮 Контрабандисты Шарии", ranks: [
+    { title: "Курьер чёрного рынка", salary: 24, minAge: 13, minNorth: 15, risk: 0.14 },
+    { title: "Сбытчик кристаллов", salary: 65, minAge: 17, minMagic: 50, risk: 0.20 },
+    { title: "Фальшивомонетчик", salary: 170, minAge: 22, minInt: 95, risk: 0.28 },
+    { title: "Барон Чёрной Магии", salary: 410, minAge: 28, minMagic: 260, risk: 0.35 }
+  ]},
+  demon: { id: "underground_demon", name: "💀 Мародёры Пустошей", ranks: [
+    { title: "Мародёр руин", salary: 20, minAge: 12, minNorth: 15, risk: 0.16 },
+    { title: "Пустынный налётчик", salary: 55, minAge: 16, minSword: 55, risk: 0.24 },
+    { title: "Главарь перевала", salary: 150, minAge: 21, minSword: 160, risk: 0.32 },
+    { title: "Атаман Караванов", salary: 380, minAge: 27, minSword: 330, risk: 0.38 }
+  ]},
+  great_forest: { id: "underground_forest", name: "🌲 Браконьеры Чащи", ranks: [
+    { title: "Капканщик шкур", salary: 22, minAge: 12, minNorth: 18, risk: 0.15 },
+    { title: "Браконьер святилищ", salary: 58, minAge: 16, minSword: 60, risk: 0.22 },
+    { title: "Теневой ловец", salary: 160, minAge: 21, minSword: 170, risk: 0.34 },
+    { title: "Хозяин Подполья Леса", salary: 400, minAge: 28, minSword: 340, risk: 0.38 }
+  ]},
+  milis: { id: "underground_milis", name: "🩸 Культ Чёрного Древа", ranks: [
+    { title: "Тайный святотатец", salary: 26, minAge: 14, minInt: 18, risk: 0.18 },
+    { title: "Скупщик реликвий", salary: 70, minAge: 18, minInt: 55, risk: 0.26 },
+    { title: "Ересиарх Культа", salary: 180, minAge: 23, minMagic: 150, risk: 0.33 },
+    { title: "Патриарх Теней", salary: 450, minAge: 30, minMagic: 300, risk: 0.40 }
+  ]},
+  begaritt: { id: "underground_begaritt", name: "🏜️ Корсары Барханов", ranks: [
+    { title: "Вор колодцев", salary: 24, minAge: 13, minNorth: 18, risk: 0.15 },
+    { title: "Налётчик на оазисы", salary: 65, minAge: 17, minSword: 65, risk: 0.25 },
+    { title: "Хозяин тайного оазиса", salary: 175, minAge: 22, minSword: 180, risk: 0.32 },
+    { title: "Султан Разбойников", salary: 440, minAge: 29, minSword: 360, risk: 0.39 }
+  ]}
+};
 
-function toggleSound() {
-  if (typeof audioEngine === "undefined") return;
-  const muted = audioEngine.toggleMute();
-  setText("btn-sound-toggle", muted ? "🔇 Звук: ВЫКЛ" : "🔊 Звук: ВКЛ");
-  if (!muted) playSound("click");
-}
+const ASURA_POLITICS = {
+  factions: [
+    { id: "ariel", name: "Принцесса Ариэль Анемой Асура", icon: "👑", desc: "Реформаторы, союз с Сильфи и Люком." },
+    { id: "prince_first", name: "Первый Принц Гравелл", icon: "🦁", desc: "Консерваторы, старая знать и армия." },
+    { id: "prince_second", name: "Второй Принц Хальфас", icon: "🐍", desc: "Тайные интриги и гильдии убийц." }
+  ],
+  nobilityTitles: [
+    { id: "citizen", name: "Свободный гражданин", salary: 0, influence: 0 },
+    { id: "knight", name: "Пожалованный Рыцарь", salary: 15, influence: 10 },
+    { id: "baron", name: "Барон Провинции", salary: 45, influence: 25 },
+    { id: "viscount", name: "Виконт Роа", salary: 100, influence: 60 },
+    { id: "count", name: "Граф Королевства", salary: 220, influence: 120 },
+    { id: "duke", name: "Герцог Асуры", salary: 550, influence: 280 }
+  ]
+};
 
-document.addEventListener("visibilitychange", () => {
-  if (typeof audioEngine === "undefined") return;
-  if (document.hidden) audioEngine.stopMusic();
-  else if (!audioEngine.isMuted) audioEngine.startMusic();
-});
+// Семь Великих Сил на плотной шкале (20 000 -> 95 000 БМ)
+const SEVEN_GREAT_POWERS = [
+  { rank: 1, title: "Бог Техники", name: "Неизвестный Владыка", region: "ranoa", cp: 95000, hp: 45000, maxHp: 45000, isDead: false },
+  { rank: 2, title: "Бог Драконов", name: "Орстед", region: "asura", cp: 85000, hp: 40000, maxHp: 40000, isDead: false },
+  { rank: 3, title: "Бог Бойцов", name: "Бадигади (Золотая Броня)", region: "begaritt", cp: 65000, hp: 32000, maxHp: 32000, isDead: false },
+  { rank: 4, title: "Бог Демонов", name: "Лаплас", region: "demon", cp: 48000, hp: 22000, maxHp: 22000, isDead: false },
+  { rank: 5, title: "Бог Смерти", name: "Рэндольф Мариан", region: "asura", cp: 35000, hp: 15000, maxHp: 15000, isDead: false },
+  { rank: 6, title: "Бог Меча", name: "Гал Фарион", region: "ranoa", cp: 26000, hp: 11000, maxHp: 11000, isDead: false },
+  { rank: 7, title: "Бог Севера", name: "Александр (Кальман III)", region: "asura", cp: 20000, hp: 8500, maxHp: 8500, isDead: false }
+];
 
-// =========================================================================
-// УНИВЕРСАЛЬНЫЕ МОДАЛКИ И ЛОГИ
-// =========================================================================
-function showActionModal(title, text, icon = "⚡") {
-  setText("action-modal-icon", icon);
-  setText("action-modal-title", title);
-  const body = $("action-modal-body");
-  if (body) body.innerHTML = text;
-  if ($("action-modal")) $("action-modal").style.display = "flex";
-}
-function closeActionModal() { if ($("action-modal")) $("action-modal").style.display = "none"; playSound("click"); }
+const REPLACEMENT_MASTERS = {
+  1: ["Механический Архонт Зетта", "Хранитель Формул Альвиус", "Искатель Первой Эпохи Крон"],
+  2: ["Кровавый Дракон Валхар", "Наследник Золотой Чешуи Игнис", "Рыцарь Дракона Сайрус"],
+  3: ["Чемпион Арены Кассандра", "Титан Кулака Бранн", "Король Гладиаторов Рагнар"],
+  4: ["Владычица Багровой Маны Селена", "Демонический Лорд Арктур", "Беззвучный Архимаг Валдис"],
+  5: ["Тень Жнеца Нокс", "Безымянный Палач Милиса", "Мастер Клинков Туманов Каэль"],
+  6: ["Алый Святой Меча Джино", "Принцесса Света Изольда", "Мастер Додзё Севера Торваль"],
+  7: ["Странствующий Герой Эльдрик", "Железный Трикстер Леонхард", "Рыцарь Свободной Стали Маркус"]
+};
 
-function askConfirm(title, text, onYes) {
-  setText("confirm-modal-title", title);
-  const body = $("confirm-modal-body");
-  if (body) body.innerHTML = text;
-  confirmCallback = onYes;
-  const yesBtn = $("confirm-modal-yes");
-  if (yesBtn) yesBtn.onclick = () => { closeConfirmModal(); if (confirmCallback) confirmCallback(); };
-  if ($("confirm-modal")) $("confirm-modal").style.display = "flex";
-}
-function closeConfirmModal() { if ($("confirm-modal")) $("confirm-modal").style.display = "none"; }
+const SEVEN_POWERS_QUESTS = [
+  { rank: 7, title: "Поиски Бога Севера Кальмана III", regionKey: "asura", reqCp: 14000, desc: "Расспросить в тавернах Арса о мастере, орудующем мечом в перекате." },
+  { rank: 6, title: "Экспедиция на Святую Землю Меча", regionKey: "ranoa", reqCp: 20000, desc: "Подняться на снежные пики додзё Гала Фариона." },
+  { rank: 5, title: "Поиски Бога Смерти Рэндольфа", regionKey: "asura", reqCp: 28000, desc: "Найти трактир на окраине королевства, где скрывается великий фехтовальщик." },
+  { rank: 4, title: "Гробница Бога Демонов", regionKey: "demon", reqCp: 38000, desc: "Спуститься в жерло чёрного разлома пустоши Некросса." },
+  { rank: 3, title: "Алтарь Золотой Брони Бога Бойцов", regionKey: "begaritt", reqCp: 52000, desc: "Вызвать Бадигади на поединок в сердце пустыни." },
+  { rank: 2, title: "Вызов Богу Драконов Орстеду", regionKey: "asura", reqCp: 70000, desc: "Встать на пути сильнейшего воина в ущелье Красного Дракона." },
+  { rank: 1, title: "Врата Бога Техники", regionKey: "ranoa", reqCp: 82000, desc: "Пробить барьер древнейшей лаборатории Первой Эпохи." }
+];
 
-function showBirthModal() {
-  if (!player) return;
-  const era = getWorldEra(worldState.currentWorldYear);
-  const box = $("birth-card-content");
-  if (box) {
-    box.innerHTML = `
-      <div><b>Имя:</b> ${player.name} (${player.gender === "male" ? "♂️" : "♀️"})</div>
-      <div><b>Год и Эпоха:</b> ${worldState.currentWorldYear} г. К.Д. (${era.name})</div>
-      <div><b>Раса:</b> ${player.race} (предел жизни ~${player.maxAge} лет)</div>
-      <div><b>Регион:</b> ${REGIONS[player.currentRegionKey]?.name}</div>
-      <div><b>Сословие и род:</b> ${player.familyStatus.name} • ${player.origin}</div>
-      <div><b>Благословение:</b> ${player.trait.name}</div>
-      <div><b>Стартовый сосуд маны:</b> ${player.maxMana} • <b>Золото:</b> ${player.coins}🪙</div>
-    `;
+const FACTION_ENDGAMES = {
+  orsted: {
+    id: "hitogami_void_breach",
+    title: "🌌 Прорыв в Белое Пространство: Финал против Хитогами",
+    desc: "Вы и Орстед вторгаетесь в измерение Бога Людей! На кону судьба Шестиликого Мира.",
+    reqGen: 4, reqCp: 78000, cardClass: "void-rift-card",
+    btnText: "⚔️ ВОРВАТЬСЯ В ИЗМЕРЕНИЕ ХИТОГАМИ (ФИНАЛ)",
+    boss: { name: "Бог Людей (Хитогами)", cp: 98000, hp: 50000, maxHp: 50000 }
+  },
+  hitogami: {
+    id: "orsted_ambush_finale",
+    title: "👁️ Воля Человекобога: Крушение Проклятого Дракона",
+    desc: "Ведомый Снами Хитогами, вы заманили Орстеда в ловушку истощения маны! Сокрушите Бога Драконов!",
+    reqGen: 4, reqCp: 78000, cardClass: "hitogami-rift-card",
+    btnText: "🗡️ СРАЗИТЬ ОРСТЕДА ВО ИМЯ ХИТОГАМИ (ФИНАЛ)",
+    boss: { name: "Бог Драконов Орстед (В Ловушке)", cp: 95000, hp: 48000, maxHp: 48000 }
   }
-  if ($("birth-modal")) $("birth-modal").style.display = "flex";
-}
-function closeBirthModal() { if ($("birth-modal")) $("birth-modal").style.display = "none"; playSound("click"); }
+};
 
-function log(msg) {
-  const box = $("logs");
-  if (!box) return;
-  const el = document.createElement("div");
-  el.className = "log-entry";
-  el.innerHTML = `<span class="log-year">[${player ? player.age : 0} л. | ${worldState.currentWorldYear} г.]</span> ${msg}`;
-  box.appendChild(el);
-  box.scrollTop = box.scrollHeight;
-  try { tg?.HapticFeedback?.impactOccurred("light"); } catch (e) {}
-}
+const ESTATES = [
+  { id: "cottage_buena", name: "🏡 Домик с садом в Буэне", cost: 45, income: 6, hpRegen: 8, desc: "+6🪙/г., +8 HP/г." },
+  { id: "townhouse_roa", name: "🏘️ Каменный особняк в Роа", cost: 180, income: 22, hpRegen: 18, desc: "+22🪙/г., +18 HP/г." },
+  { id: "milis_manor", name: "⛪ Усадьба в Милисионе", cost: 520, income: 65, hpRegen: 35, desc: "+65🪙/г., +35 HP/г." },
+  { id: "sharia_castle", name: "🏰 Замок-резиденция в Шарии", cost: 1400, income: 160, hpRegen: 65, desc: "+160🪙/г., +65 HP/г., +15 маны детям." },
+  { id: "asura_palace", name: "👑 Дворец в Асуре", cost: 3500, income: 420, hpRegen: 120, desc: "+420🪙/г., +120 HP/г., +25 к стилям детям." }
+];
 
-// =========================================================================
-// КАРМА, СТАТЫ И БМ
-// =========================================================================
-function getReincarnationKarma() {
-  try { return parseInt(localStorage.getItem("bit_tensei_karma") || "0", 10); } catch { return 0; }
-}
-function addReincarnationKarma() {
-  const k = getReincarnationKarma() + 1;
-  try { localStorage.setItem("bit_tensei_karma", String(k)); } catch {}
-  return k;
-}
+const CASTLE_UPGRADES = [
+  { id: "crypt", name: "🕯️ Фамильный Склеп Предков", cost: 150, desc: "Молитва раз в 5 лет (+20 к Мечу/Магии, 100% сил)." },
+  { id: "training_yard", name: "⚔️ Воинский Полигон Меча", cost: 200, desc: "Дети рода получают +25 к Мечу, а тренировки на 25% эффективнее." },
+  { id: "alchemy_lab", name: "🧪 Алхимическая Оранжерея", cost: 140, desc: "Ежегодно производит +2 целебных зелья." },
+  { id: "grand_vault", name: "🪙 Неприступная Казна", cost: 260, desc: "+15% к прибыли караванов и -5% риска." },
+  { id: "trophy_hall", name: "🐉 Зал Трофеев Драконов", cost: 400, desc: "+50 Славы отряда и +1,200 БМ авторитета." }
+];
 
-function getMaxAP(age) { return age <= 3 ? 5 : age <= 9 ? 8 : age <= 15 ? 10 : 12; }
+const CARAVAN_ROUTES = [
+  { id: "caravan_local", name: "🛒 Местный тракт Фитоа", cost: 35, reward: 65, risk: 0.10, desc: "Доставка зерна (+30🪙)." },
+  { id: "caravan_ranoa", name: "❄️ Снежный караван в Шарию", cost: 110, reward: 220, risk: 0.22, desc: "Перевозка мифрила (+110🪙)." },
+  { id: "caravan_milis", name: "⛪ Морской конвой в Милис", cost: 280, reward: 620, risk: 0.32, desc: "Шелка и реликвии (+340🪙)." },
+  { id: "caravan_begaritt", name: "🏜️ Золотой Караван Бегаритта", cost: 700, reward: 1750, risk: 0.45, desc: "Сквозь пустыню (+1050🪙)!" }
+];
 
-function calcCombatPower(p) {
-  if (!p) return 0;
-  let cp = (p.hp || 0) * 2 + (p.maxMana || 0) * 3 + (p.magicExp + p.swordGodExp + p.waterGodExp + p.northGodExp) * 4 + (p.intellect || 0) * 5;
-  ["weapon", "armor", "accessory"].forEach(s => { if (p.equipment?.[s]) cp += p.equipment[s].cp || 0; });
-  if (p.demonEyes?.left) cp += p.demonEyes.left.cp || 0;
-  if (p.demonEyes?.right) cp += p.demonEyes.right.cp || 0;
-  if (p.castleUpgrades?.includes("trophy_hall")) cp += 3000;
-  if (p.injuries?.some(i => i.id === "lost_arm") && p.equipment?.accessory?.id !== "prosthetic_arm") cp = Math.floor(cp * 0.7);
-  const karma = getReincarnationKarma();
-  if (karma > 0) cp = Math.floor(cp * (1 + karma * 0.05));
-  const cap = p.trait?.id === "god_mode" ? 999999999 : (GENERATION_CP_CAPS[p.generation] || 9999999);
-  return Math.min(cap, Math.floor(cp));
-}
+const PERUGIUS_TRIALS = [
+  { rank: 1, name: "Испытание Первого Духа (Алхор)", reqCp: 5000, rewardText: "Признание рыцарей небес (+80 Знаний)" },
+  { rank: 2, name: "Поединок с Золотым Рыцарем Сильфидом", reqCp: 14000, rewardText: "Благословение Дракона (+300 макс. HP, +2,500 БМ)" },
+  { rank: 3, name: "Аудиенция у Перугиуса", reqCp: 32000, rewardText: "Драконье Имя и Фактор Лапласа (+1,000🪙)" }
+];
 
-function calcSquadCombatPower(p) {
-  return !p ? 0 : calcCombatPower(p) + (p.squad || []).reduce((s, m) => s + (m.cp || 500), 0);
-}
+const GREYRAT_BRANCHES = [
+  { id: "boreas", name: "Северная Ветвь: Бореас Грейрат", region: "Роа", leader: "Саурос Бореас Грейрат", desc: "Яростные мечники и крепости." },
+  { id: "notos", name: "Южная Ветвь: Нотос Грейрат", region: "Милис/Асура", leader: "Амарант Нотос Грейрат", desc: "Богатство и магия воды." },
+  { id: "zephyrus", name: "Восточная Ветвь: Зефирос Грейрат", region: "Арс", leader: "Филипп Зефирос Грейрат", desc: "Шпионаж и тайные договоры." },
+  { id: "euros", name: "Западная Ветвь: Эурос Грейрат", region: "Западные порты", leader: "Гарольд Эурос Грейрат", desc: "Торговый флот и верфи." }
+];
 
-function calculateRank(exp, list) {
-  if (exp >= 1200) return list[6] || list[list.length - 1];
-  if (exp >= 600) return list[5] || list[list.length - 1];
-  if (exp >= 300) return list[4] || list[list.length - 1];
-  if (exp >= 120) return list[3] || list[list.length - 1];
-  if (exp >= 40) return list[2] || list[list.length - 1];
-  if (exp >= 10) return list[1] || list[0];
-  return list[0];
-}
+const FIRST_WAR_TABLETS = [
+  { id: "tab_human", name: "Скрижаль Бога Людей", regionKey: "asura", reqLang: "human", desc: "Катакомбы дворца Арс." },
+  { id: "tab_demon", name: "Обелиск Бога Демонов", regionKey: "demon", reqLang: "demon", desc: "Пески пустоши Некросса." },
+  { id: "tab_dragon", name: "Плита Драконьего Владыки", regionKey: "begaritt", reqLang: "dragon", desc: "Алтарь Лабиринта Бегаритта." },
+  { id: "tab_beast", name: "Стела Священного Зверя", regionKey: "great_forest", reqLang: "beast", desc: "Сердце Великого Древа." },
+  { id: "tab_fighter", name: "Скрижаль Бога Бойцов", regionKey: "ranoa", reqLang: "god_fighter", desc: "Тайная зала Академии Шарии." }
+];
 
-function getBardNickname(p, cp) {
-  if (p.age <= 3) return cp >= 2000 ? "Дитя с аурой легенды" : "Младенец в колыбели";
-  if (p.currentPowersSeat) return `Владыка #${p.currentPowersSeat} Семи Сил`;
-  if (p.currentUndergroundJob && p.undergroundRankIndex >= 2) return "Призрак Подполья";
-  if (p.trait?.id === "silent_cast" && p.magicExp >= 120) return "Беззвучный Архимаг";
-  if (p.swordGodExp >= p.magicExp && p.swordGodExp >= 300) return "Алый Клинок";
-  if (p.magicExp >= 300) return "Повелитель Стихий";
-  if (cp >= 180000) return "Живая Легенда Эпохи";
-  if (cp >= 1500) return "Восходящий Мастер";
-  return "Юный Путник";
-}
+const REGIONS = {
+  asura: { name: "🏰 Королевство Асура", travelCost: 25, mapX: 165, mapY: 108, color: "#fbbf24", desc: "Сердце мира, столица Арс и плодородные земли Фитоа.", origins: [
+    { id: "boreas", name: "Дом Бореас Грейрат", coins: 110, manaBonus: 15, int: 5, swordGod: 12, log: "Вы открыли глаза в крепости Роа ветви Бореас." },
+    { id: "notos", name: "Дом Нотос Грейрат", coins: 95, manaBonus: 18, int: 6, waterGod: 12, log: "Мраморные залы юга Асуры." },
+    { id: "knight_buena", name: "Рыцари деревни Буэна", coins: 25, manaBonus: 8, swordGod: 10, int: 3, log: "Уютный дом у пшеничных полей." },
+    { id: "slums_ars", name: "Трущобы столицы Арс", coins: 4, manaBonus: 5, northGod: 14, int: 2, log: "Суровые переулки столицы." }
+  ]},
+  ranoa: { name: "❄️ Королевства Раноа", travelCost: 45, mapX: 168, mapY: 42, color: "#38bdf8", desc: "Северные земли, Шария и Святая Земля Меча.", origins: [
+    { id: "academy_prof", name: "Семья Профессора", coins: 75, manaBonus: 30, int: 12, log: "Вы выросли среди фолиантов Шарии." },
+    { id: "magic_guild", name: "Цех Артефакторов", coins: 45, manaBonus: 20, int: 8, log: "Мастерская кристаллов маны." },
+    { id: "winter_hunter", name: "Охотники ледников", coins: 12, manaBonus: 8, northGod: 14, int: 3, log: "Ледяной ветер Севера." }
+  ]},
+  demon: { name: "🌋 Демонический Континент", travelCost: 75, mapX: 288, mapY: 66, color: "#ef4444", desc: "Багровые пустоши, монстры и Город Ветров.", origins: [
+    { id: "migurd_village", name: "Деревня Мигурд", coins: 10, manaBonus: 40, int: 8, log: "Сапфировые волосы и телепатия." },
+    { id: "wind_port", name: "Контрабандисты Ветров", coins: 35, manaBonus: 12, northGod: 16, int: 5, log: "Шум портовых таверн." }
+  ]},
+  great_forest: { name: "🌲 Великий Лес", travelCost: 40, mapX: 222, mapY: 145, color: "#10b981", desc: "Вековые кроны, родина клана Дорудиа.", origins: [
+    { id: "dorudia", name: "Клан Дорудиа", coins: 18, manaBonus: 12, swordGod: 20, int: 4, log: "Дом среди гигантских ветвей." },
+    { id: "scout", name: "Лесные следопыты", coins: 8, manaBonus: 8, northGod: 18, int: 4, log: "Бесшумные прыжки по кронам." }
+  ]},
+  milis: { name: "⛪ Святая Земля Милис", travelCost: 45, mapX: 168, mapY: 178, color: "#e2e8f0", desc: "Белокаменная столица у Священного Древа.", origins: [
+    { id: "temple_knight", name: "Рыцари Храма", coins: 60, manaBonus: 15, waterGod: 18, int: 5, log: "Белый плащ Святого Милиса." },
+    { id: "merchant", name: "Торговый дом Милиса", coins: 80, manaBonus: 5, int: 8, log: "Шелка, специи и караваны." }
+  ]},
+  begaritt: { name: "🏜️ Континент Бегаритт", travelCost: 90, mapX: 62, mapY: 162, color: "#f59e0b", desc: "Раскалённая пустыня и смертоносные лабиринты.", origins: [
+    { id: "dungeon_raider", name: "Искатели Лабиринтов", coins: 55, manaBonus: 18, swordGod: 15, int: 6, log: "Жизнь у входа в лабиринт." },
+    { id: "desert_nomad", name: "Кочевники Барханов", coins: 15, manaBonus: 8, northGod: 20, int: 4, log: "Сквозь бури и пески." }
+  ]}
+};
 
-// =========================================================================
-// СОЗДАНИЕ ПЕРСОНАЖА
-// =========================================================================
-function setCreationGender(g) {
-  creationGender = g;
-  $("btn-gender-male")?.classList.toggle("active", g === "male");
-  $("btn-gender-female")?.classList.toggle("active", g === "female");
-  randomizeNameInputs();
-  playSound("click");
-}
+const MAP_ROUTES = [
+  ["ranoa", "asura"], ["asura", "great_forest"], ["great_forest", "milis"],
+  ["asura", "milis"], ["ranoa", "demon"], ["milis", "begaritt"], ["asura", "begaritt"]
+];
 
-function randomizeNameInputs() {
-  const list = SYLLABLES[creationGender];
-  const n = list[Math.floor(Math.random() * list.length)] + (Math.random() > 0.45 ? SYLLABLES.suffix[Math.floor(Math.random() * SYLLABLES.suffix.length)] : "");
-  const s = SYLLABLES.surnames[Math.floor(Math.random() * SYLLABLES.surnames.length)];
-  if ($("input-name")) $("input-name").value = n;
-  if ($("input-surname")) $("input-surname").value = s;
-}
+const SHOP_ITEMS = [
+  { id: "bronze_dagger", type: "weapon", name: "🗡️ Бронзовый кинжал", cost: 15, cp: 45, desc: "+45 БМ." },
+  { id: "iron_sword", type: "weapon", name: "⚔️ Железный палаш", cost: 40, cp: 130, desc: "+130 БМ." },
+  { id: "oak_staff", type: "weapon", name: "🪄 Посох из ветви Энта", cost: 65, cp: 210, desc: "+210 БМ." },
+  { id: "steel_rapier", type: "weapon", name: "🤺 Асурианская рапира", cost: 120, cp: 380, desc: "+380 БМ." },
+  { id: "heavy_claymore", type: "weapon", name: "🪓 Двуручный клеймор севера", cost: 220, cp: 680, desc: "+680 БМ." },
+  { id: "dragon_blade", type: "weapon", name: "🗡️ Клинок из кости Дракона", cost: 480, cp: 1400, desc: "+1,400 БМ." },
+  { id: "staff_arcane", type: "weapon", name: "🔮 Посох Магического Океана", cost: 850, cp: 2400, desc: "+2,400 БМ." },
+  { id: "phoenix_spear", type: "weapon", name: "🔱 Копьё Спардов", cost: 1300, cp: 3500, desc: "+3,500 БМ." },
+  { id: "aqua_heartia", type: "weapon", name: "🌟 Посох Водного Океана", cost: 1900, cp: 4800, desc: "+4,800 БМ." },
+  { id: "god_slayer_sword", type: "weapon", name: "⚡ Меч Рассекатель Света", cost: 3200, cp: 7500, desc: "Клинок школы Бога (+7,500 БМ)." },
+  { id: "apprentice_robe", type: "armor", name: "🧥 Мантия ученика", cost: 12, cp: 35, hp: 10, desc: "+35 БМ, +10 макс. HP." },
+  { id: "leather_armor", type: "armor", name: "🛡️ Кожаный доспех", cost: 35, cp: 110, hp: 25, desc: "+110 БМ, +25 макс. HP." },
+  { id: "steel_plate", type: "armor", name: "🛡️ Стальной нагрудник", cost: 130, cp: 420, hp: 55, desc: "+420 БМ, +55 макс. HP." },
+  { id: "mithril_chain", type: "armor", name: "⛓️ Мифриловая кольчуга", cost: 320, cp: 1000, hp: 100, desc: "+1,000 БМ, +100 макс. HP." },
+  { id: "dragon_scale", type: "armor", name: "🐉 Доспех Красного Дракона", cost: 1100, cp: 3200, hp: 220, desc: "+3,200 БМ, +220 макс. HP." },
+  { id: "royal_aegis", type: "armor", name: "👑 Королевский Эгид Асуры", cost: 2400, cp: 5800, hp: 380, desc: "+5,800 БМ, +380 макс. HP." },
+  { id: "magic_armor", type: "armor", name: "🤖 Магическая Броня «Версия 1»", cost: 4500, cp: 9500, hp: 650, desc: "Экзоскелет титанов (+9,500 БМ, +650 макс. HP)." },
+  { id: "ring_mana", type: "accessory", name: "💍 Кольцо Концентрации Маны", cost: 85, cp: 260, desc: "+260 БМ." },
+  { id: "boots_wind", type: "accessory", name: "👢 Сапоги Ветроступа", cost: 260, cp: 750, desc: "+750 БМ." },
+  { id: "laplace_gem", type: "accessory", name: "💎 Самоцвет Демон-Дракона", cost: 1100, cp: 2800, desc: "+2,800 БМ." },
+  { id: "prosthetic_arm", type: "accessory", name: "🦾 Протез из Сплава Зари", cost: 650, cp: 1600, desc: "Снимает штраф за потерю руки (+1,600 БМ)." },
+  { id: "heal_potion", type: "potion", name: "🧪 Зелье Исцеления", cost: 15, heal: 60, desc: "+60 HP в бою или вне боя." }
+];
 
-function updateRaceInfo() {
-  const r = RACES[$("select-race")?.value] || RACES.human;
-  setText("race-desc", `${r.desc} (Мана: ${r.bonus.baseMana}, Жизнь: ~${r.maxAge} лет)`);
-}
+const DUNGEONS = [
+  { id: "dung_cellar", name: "🕳️ Катакомбы Гоблинов", reqRank: "F", maxFloors: 5, cpBase: 160, dropArtifact: "bronze_dagger", desc: "Сырые норы под деревней Буэна." },
+  { id: "dung_ruins", name: "🏛️ Руины Павших Рыцарей", reqRank: "D", maxFloors: 8, cpBase: 650, dropArtifact: "steel_rapier", desc: "Каменные залы с ловушками." },
+  { id: "dung_teleport", name: "🌀 Лабиринт Телепортации", reqRank: "B", maxFloors: 12, cpBase: 3500, dropArtifact: "laplace_gem", desc: "Смертоносный лабиринт в Бегаритте." },
+  { id: "dung_dragon", name: "🐉 Бездна Драконьего Гребня", reqRank: "S", maxFloors: 15, cpBase: 14000, dropArtifact: "dragon_scale", desc: "Гнездо древних виверн и Короля Драконов." }
+];
 
-function onRegionChange() {
-  const key = $("select-region")?.value || "asura";
-  const reg = REGIONS[key] || REGIONS.asura;
-  const origSel = $("select-origin");
-  if (origSel) origSel.innerHTML = reg.origins.map(o => `<option value="${o.id}">${o.name}</option>`).join("");
-  const famSel = $("select-family-status");
-  const statuses = REGION_FAMILY_STATUSES[key] || FAMILY_STATUSES;
-  if (famSel) famSel.innerHTML = statuses.map(f => `<option value="${f.id}">${f.name} — ${f.desc}</option>`).join("");
-}
+const ALL_GUILD_QUESTS = [
+  { id: "q_f1", rank: "F", name: "🐀 Крысы в амбарах", enemy: "Крыса-мутант", cp: 90, hp: 50, reward: 10, gp: 8 },
+  { id: "q_f2", rank: "F", name: "🌿 Травы у волчьих нор", enemy: "Степной волчонок", cp: 120, hp: 60, reward: 14, gp: 10 },
+  { id: "q_e1", rank: "E", name: "🐗 Клыкастые Кабаны", enemy: "Клыкастый Вепрь", cp: 260, hp: 110, reward: 25, gp: 15 },
+  { id: "q_e2", rank: "E", name: "🍄 Кислотные Слизни", enemy: "Кислотный Слизень", cp: 320, hp: 130, reward: 32, gp: 18 },
+  { id: "q_d1", rank: "D", name: "🐺 Двуглавые Волки", enemy: "Вожак Двуглавых", cp: 680, hp: 230, reward: 60, gp: 25 },
+  { id: "q_d2", rank: "D", name: "🧌 Набег гоблинов", enemy: "Гоблин-главарь", cp: 880, hp: 280, reward: 78, gp: 30 },
+  { id: "q_c1", rank: "C", name: "🐍 Багровые Кобры", enemy: "Багровая Кобра", cp: 1600, hp: 480, reward: 140, gp: 45 },
+  { id: "q_c2", rank: "C", name: "🧟 Зачистка склепа", enemy: "Рыцарь-скелет", cp: 2100, hp: 580, reward: 185, gp: 50 },
+  { id: "q_b1", rank: "B", name: "🗿 Каменный Энт", enemy: "Каменный Энт", cp: 4200, hp: 1100, reward: 320, gp: 80 },
+  { id: "q_b2", rank: "B", name: "🦂 Императорский Скорпион", enemy: "Императорский Скорпион", cp: 5500, hp: 1400, reward: 420, gp: 95 },
+  { id: "q_a1", rank: "A", name: "🦅 Ледяная Виверна", enemy: "Ледяная Виверна", cp: 9200, hp: 2600, reward: 680, gp: 150 },
+  { id: "q_a2", rank: "A", name: "🦍 Снежный Бегемот", enemy: "Пещерный Бегемот", cp: 11500, hp: 3400, reward: 850, gp: 180 },
+  { id: "q_s1", rank: "S", name: "🐉 Красный Дракон", enemy: "Красный Дракон", cp: 16000, hp: 6200, reward: 1400, gp: 300 },
+  { id: "q_s2", rank: "S", name: "💀 Архилич Бездны", enemy: "Архилич Бездны", cp: 19500, hp: 8200, reward: 1850, gp: 450 }
+];
 
-function showCreation() {
-  if ($("select-race")) $("select-race").innerHTML = Object.entries(RACES).map(([k, r]) => `<option value="${k}">${r.name}</option>`).join("");
-  if ($("select-region")) $("select-region").innerHTML = Object.entries(REGIONS).map(([k, r]) => `<option value="${k}">${r.name}</option>`).join("");
-  if ($("select-trait")) $("select-trait").innerHTML = TRAITS.map(t => `<option value="${t.id}">${t.name} (${t.desc})</option>`).join("");
+const CANON_NPCS = [
+  { id: "sylphie", name: "Сильфиетта", gender: "female", race: "Эльф / Полуэльф", role: "Подруга детства • Маг без слов", cp: 900, region: "asura", minAge: 4, maxAge: 14, baseChance: 0.25 },
+  { id: "roxy", name: "Рокси Мигурдия", gender: "female", race: "Демон", role: "Наставница • Маг Святого Ранга", cp: 2800, region: "asura", minAge: 5, maxAge: 16, baseChance: 0.22 },
+  { id: "eris", name: "Эрис Бореас Грейрат", gender: "female", race: "Человек", role: "Леди Бореас • Бешеная мечница", cp: 1800, region: "asura", minAge: 7, maxAge: 18, baseChance: 0.22 },
+  { id: "ghislaine", name: "Гилен Дедольдия", gender: "female", race: "Зверочеловек", role: "Король Меча", cp: 9500, region: "asura", minAge: 7, maxAge: 25, baseChance: 0.16 },
+  { id: "ruijerd", name: "Руджерд Спардия", gender: "male", race: "Спард", role: "Тупик • Воин сотен битв", cp: 11500, region: "demon", minAge: 10, maxAge: 35, baseChance: 0.22 },
+  { id: "cliff", name: "Клифф Гриммор", gender: "male", race: "Человек", role: "Гениальный экзорцист Милиса", cp: 2200, region: "milis", minAge: 10, maxAge: 22, baseChance: 0.20 },
+  { id: "zanoba", name: "Заноба Широне", gender: "male", race: "Человек", role: "Мико чудовищной силы", cp: 6800, region: "ranoa", minAge: 12, maxAge: 28, baseChance: 0.20 }
+];
 
-  const era = getWorldEra(worldState.currentWorldYear);
-  setText("creation-world-era-hint", `📅 Текущий год мира: ${worldState.currentWorldYear} г. К.Д. • ${era.name}`);
-  const resetBtn = $("btn-creation-reset-world");
-  if (resetBtn) resetBtn.style.display = (worldState.currentWorldYear > START_YEAR || worldState.chronicles.length > 0) ? "block" : "none";
+// Личные квесты канонических спутников (открываются при дружбе >= 80%)
+const CANON_QUESTS = {
+  roxy: { title: "Тайна Святого Водяного Круга", rewardText: "Рокси подарила вам Посох Водного Океана и обучила Святой магии!", action: (p) => {
+    const st = SHOP_ITEMS.find(i => i.id === "aqua_heartia");
+    if (st) p.inventory.push({ ...st });
+    p.magicExp += 80;
+  }},
+  sylphie: { title: "Секрет Беззвучного Каста", rewardText: "Сильфи научила вас тончайшему контролю маны (+60 Магии, +45 макс. маны)!", action: (p) => { p.magicExp += 60; p.maxMana += 45; } },
+  eris: { title: "Спарринг Бешеного Пса", rewardText: "Эрис выбила из вас весь страх в дуэли (+90 к Мечу, +30 HP)!", action: (p) => { p.swordGodExp += 90; p.maxHp += 30; } },
+  ghislaine: { title: "Урок Короля Меча", rewardText: "Гилен показала стойку Меча Света (+110 к Мечу)!", action: (p) => { p.swordGodExp += 110; } },
+  ruijerd: { title: "Клятва Воина-Спарда", rewardText: "Руджерд передал боевые приёмы (+80 Севера, +80 Славы отряда)!", action: (p) => { p.northGodExp += 80; p.squadFame += 80; } },
+  cliff: { title: "Благословение Экзорциста", rewardText: "Клифф снял все ваши проклятия и излечил любые травмы (+40 Знаний)!", action: (p) => { p.injuries = []; p.hp = p.maxHp; p.intellect += 40; } },
+  zanoba: { title: "Чертёж Магической Брони", rewardText: "Заноба подарил вам уникальную броню-прототип (+150 HP, +300🪙)!", action: (p) => { p.maxHp += 150; p.coins += 300; } }
+};
 
-  updateRaceInfo();
-  onRegionChange();
-  randomizeNameInputs();
-  if ($("creation-overlay")) $("creation-overlay").style.display = "flex";
-}
+const SCHOOLS = [
+  { id: "ranoa_academy", name: "🎓 Магическая Академия Раноа", regionKey: "ranoa", region: "Раноа (Шария)", minAge: 13, cost: 120, desc: "Центр высшей магии и беззвучного каста." },
+  { id: "asura_academy", name: "🏰 Королевская Академия Асуры", regionKey: "asura", region: "Асура (Арс)", minAge: 12, cost: 160, desc: "Элитное заведение знати и рыцарей." },
+  { id: "sword_sanctuary", name: "🗡️ Святая Земля Меча", regionKey: "ranoa", region: "Раноа (Север)", minAge: 10, cost: 80, desc: "Тренировки в снежных пиках у Бога Меча." },
+  { id: "milis_seminary", name: "⛪ Семинария Святого Милиса", regionKey: "milis", region: "Милис (Милисион)", minAge: 11, cost: 90, desc: "Священная магия лечения и барьеры." }
+];
 
-function confirmCreation() {
-  const fName = $("input-name")?.value.trim() || (creationGender === "male" ? "Рудеус" : "Эрис");
-  const sName = $("input-surname")?.value.trim() || "Грейрат";
-  const race = RACES[$("select-race")?.value] || RACES.human;
-  const regKey = $("select-region")?.value || "asura";
-  const reg = REGIONS[regKey] || REGIONS.asura;
-  const origin = reg.origins.find(o => o.id === $("select-origin")?.value) || reg.origins[0];
-  const trait = TRAITS.find(t => t.id === $("select-trait")?.value) || TRAITS[0];
-  const famList = REGION_FAMILY_STATUSES[regKey] || FAMILY_STATUSES;
-  const famStatus = famList.find(f => f.id === $("select-family-status")?.value) || famList[0];
-
-  initCharacter(fName, sName, creationGender, race, regKey, origin, trait, famStatus, 0);
-  if ($("creation-overlay")) $("creation-overlay").style.display = "none";
-  playSound("win");
-  showBirthModal();
-}
-
-function randomCreation() {
-  creationGender = Math.random() > 0.5 ? "male" : "female";
-  $("btn-gender-male")?.classList.toggle("active", creationGender === "male");
-  $("btn-gender-female")?.classList.toggle("active", creationGender === "female");
-  randomizeNameInputs();
-  const rKeys = Object.keys(RACES), regKeys = Object.keys(REGIONS);
-  const race = RACES[rKeys[Math.floor(Math.random() * rKeys.length)]];
-  const regKey = regKeys[Math.floor(Math.random() * regKeys.length)];
-  const origin = REGIONS[regKey].origins[Math.floor(Math.random() * REGIONS[regKey].origins.length)];
-  const poolTraits = TRAITS.filter(t => t.id !== "god_mode");
-  const trait = poolTraits[Math.floor(Math.random() * poolTraits.length)];
-  const famList = REGION_FAMILY_STATUSES[regKey] || FAMILY_STATUSES;
-  const fam = famList[Math.floor(Math.random() * famList.length)];
-  initCharacter($("input-name")?.value || "Рудеус", $("input-surname")?.value || "Грейрат", creationGender, race, regKey, origin, trait, fam, 0);
-  if ($("creation-overlay")) $("creation-overlay").style.display = "none";
-  playSound("win");
-  showBirthModal();
-}
-
-function initCharacter(fName, sName, gender, race, regionKey, origin, trait, familyStatus, startAge = 0, customRelations = null) {
-  const karma = getReincarnationKarma();
-  const isGod = trait?.id === "god_mode";
-  const baseMana = isGod ? 99999 : Math.round(((race.bonus.baseMana || 25) + (origin.manaBonus || 0) + (trait.manaBonus || 0) + (familyStatus.manaBonus || 0) + karma * 15) * (race.bonus.manaMod || 1)) + (startAge > 5 ? Math.min(250, startAge * 8) : 0);
-  const baseHp = isGod ? 99999 : 100 + (trait.hp || 0) + (race.bonus.hp || 0) + (familyStatus.hp || 0) + karma * 10;
-
-  const fatherName = SYLLABLES.male[Math.floor(Math.random() * SYLLABLES.male.length)] + " " + sName;
-  const motherName = SYLLABLES.female[Math.floor(Math.random() * SYLLABLES.female.length)] + " " + sName;
-
-  player = {
-    name: `${fName} ${sName}`, firstName: fName, surname: sName, gender,
-    generation: dynastyGeneration,
-    birthYear: worldState.currentWorldYear - startAge,
-    isFirstEraLife: !worldState.calamityOccurred && dynastyGeneration === 1 && worldState.currentWorldYear <= 425,
-    race: race.name, raceObj: race, maxAge: isGod ? 999 : race.maxAge,
-    regionKey, currentRegionKey: regionKey, origin: origin.name, trait, familyStatus,
-    age: startAge, ap: getMaxAP(startAge), maxAp: getMaxAP(startAge),
-    hp: baseHp, maxHp: baseHp, mana: baseMana, maxMana: baseMana,
-    magicExp: isGod ? 2000 : (startAge > 5 ? startAge * 5 : 0),
-    swordGodExp: isGod ? 2000 : (origin.swordGod || 0) + (trait.swordGod || 0) + (race.bonus.swordGod || 0) + (familyStatus.swordGod || 0) + (startAge > 5 ? startAge * 3 : 0),
-    waterGodExp: isGod ? 2000 : (origin.waterGod || 0) + (trait.waterGod || 0) + (startAge > 5 ? startAge * 3 : 0),
-    northGodExp: isGod ? 2000 : (origin.northGod || 0) + (trait.northGod || 0) + (race.bonus.northGod || 0) + (familyStatus.northGod || 0) + (startAge > 5 ? startAge * 3 : 0),
-    intellect: isGod ? 999 : 10 + (origin.int || 0) + (trait.int || 0) + (race.bonus.int || 0) + (familyStatus.int || 0) + startAge * 2,
-    coins: isGod ? 9999999 : (origin.coins || 0) + (race.bonus.coins || 0) + (familyStatus.coins || 0),
-    guildRank: isGod ? "S" : "F", guildExp: 0, guildQuestsThisYear: [], dungeonProgress: {},
-    enrolledSchool: null, schoolProgress: 0, graduatedSchools: [],
-    squad: [], squadFame: isGod ? 5000 : 0,
-    estates: [], familySeat: null, castleUpgrades: [], lastCryptMeditationAge: -10,
-    appointedHeirId: null, heirloomSlot: null,
-    discoveredSevenPowers: [], currentPowersSeat: null,
-    injuries: [], demonEyes: { left: null, right: null },
-    languages: ["human"], tabletsDeciphered: [], perugiusTrials: [], greyratAllies: [],
-    currentJob: null, jobRankIndex: 0, currentUndergroundJob: null, undergroundRankIndex: 0,
-    nobilityTitle: "citizen", asuraFaction: null, asuraInfluence: familyStatus.influence || 0,
-    calamityTriggered: false, storyCompleted: [],
-    dynastyFaction: "neutral", factionProgress: 0, hitogamiTrust: 0,
-    pregnancy: null, equipment: { weapon: null, armor: null, accessory: null },
-    inventory: [], potionsCount: 2,
-    relations: customRelations || [
-      { id: "father", name: fatherName, gender: "male", age: startAge + 24, role: "Отец • Глава дома", cp: 1200, relation: 85, status: "Семья", isFamily: true, isDead: false },
-      { id: "mother", name: motherName, gender: "female", age: startAge + 22, role: "Мать • Хранительница", cp: 800, relation: 95, status: "Семья", isFamily: true, isDead: false }
-    ],
-    spouse: null, children: []
-  };
-
-  generateYearlyGuildQuests();
-  if ($("logs")) $("logs").innerHTML = "";
-  log(`🌍 Воплощение: <b>${player.race}</b> (${gender === "male" ? "♂️" : "♀️"}) в <b>${REGIONS[regionKey].name}</b> (${worldState.currentWorldYear} г. К.Д.).`);
-  log(`🏛️ Семья: <b>${familyStatus.name}</b> • ${origin.log}`);
-  if (karma > 0) log(`✨ Карма Сансары ур. ${karma} (+${karma * 15} маны, +${karma * 10} HP).`);
-  updateUI();
-}
-
-// =========================================================================
-// ОТРИСОВКА ИНТЕРФЕЙСА
-// =========================================================================
-function renderUI() {
-  if (!player) return;
-  const era = getWorldEra(worldState.currentWorldYear);
-  setText("char-gender-icon", player.gender === "male" ? "♂️" : "♀️");
-  setText("char-name", player.name);
-  setText("char-region", `${player.race} • ${REGIONS[player.currentRegionKey]?.name}`);
-  setText("char-family-status-badge", player.familyStatus.name);
-  setText("world-year", `${worldState.currentWorldYear} г. К.Д.`);
-  setText("world-era-badge", era.name);
-  setText("age", `${player.age} лет`);
-
-  const apBadge = $("char-ap");
-  if (apBadge) {
-    apBadge.innerText = `⚡ ${player.ap}/${player.maxAp} сил`;
-    apBadge.style.background = player.ap === 0 ? "rgba(239,68,68,0.2)" : "#312e81";
-  }
-
-  const traitEl = $("char-trait");
-  if (traitEl) { traitEl.innerText = player.trait.name; traitEl.className = `tag badge-${player.trait.rarity || "common"}`; }
-
-  const cp = calcCombatPower(player);
-  setText("char-cp", cp.toLocaleString());
-  const cap = player.trait.id === "god_mode" ? 999999999 : (GENERATION_CP_CAPS[player.generation] || 9999999);
-  setText("char-cp-cap-hint", cp >= cap ? `[Предел ${player.generation}-го рода: ${cap.toLocaleString()}]` : `Потолок ${player.generation}-го рода: ${cap.toLocaleString()}`);
-
-  setText("char-guild-badge", player.age >= 10 ? `Ранг ${player.guildRank}` : "Гильдия: с 10 лет");
-  const nick = getBardNickname(player, cp);
-  setText("char-world-rank", nick);
-  setText("bard-fame-text", `Молва бардов: «${player.firstName} — ${nick}» (БМ ${cp.toLocaleString()})`);
-
-  ["left", "right"].forEach(side => {
-    const el = $(`eye-${side}`), eye = player.demonEyes?.[side];
-    if (el) {
-      el.className = eye ? "eye-slot active" : "eye-slot";
-      el.innerText = eye ? eye.name : `👁️ ${side === "left" ? "Левый" : "Правый"}: Обычный`;
+const STORY_ACTIVITIES = [
+  // --- 1-Я ЖИЗНЬ / ЭПОХА КАТАКЛИЗМА (20 ВЕХ) ---
+  { id: "s1_awakening", era: "first", age: 1, name: "📖 1. Пробуждение памяти прошлой жизни", desc: "Осознать себя в новом мире и ощутить потоки маны.",
+    action: (p) => { p.intellect += 3; p.maxMana += 12; return "Вы вспомнили прошлый мир и начали расширять сосуд души (+3 Знаний, +12 макс. маны)!"; } },
+  { id: "s1_books", era: "first", age: 3, name: "📖 2. Тайное чтение фолиантов отца", desc: "Добраться до запертого шкафа с трактатами по магии.",
+    action: (p) => { p.intellect += 5; p.magicExp += 12; return "Вы освоили грамматику и азы заклинаний (+5 Знаний, +12 Магии)!"; } },
+  { id: "s1_waterball", era: "first", age: 5, name: "📖 3. Первый беззвучный Водяной Шар", desc: "Сотворить магию силой воображения без слов во дворе.",
+    action: (p) => { p.magicExp += 22; p.maxMana += 25; return "Водяной шар разнёс стену двора! Родители в шоке (+22 Магии, +25 макс. маны)!"; } },
+  { id: "s1_mentor", era: "first", age: 6, name: "📖 4. Приезд странствующей наставницы", desc: "Демон-маг или ветеран меча стучится в двери дома.",
+    action: (p) => { p.magicExp += 18; p.swordGodExp += 10; p.intellect += 5; return "Наставник открыл секреты стихий и дисциплины (+18 Магии, +10 Мечу, +5 Знаний)!"; } },
+  { id: "s1_roa", era: "first", age: 7, name: "📖 5. Путь в крепость Роа (Служба гувернёром)", desc: "Отправиться в земли Бореас для обучения строптивой наследницы.",
+    action: (p) => { p.coins += 45; p.swordGodExp += 15; p.asuraInfluence += 10; return "Походный плащ, монеты и уважение дома Бореас (+45🪙, +15 Мечу, +10 влияния)!"; } },
+  { id: "s1_red_omen", era: "first", age: 9, name: "🔴 6. Багровое знамение в небе Фитоа", desc: "Огромный вихрь маны сгущается над облаками.",
+    action: (p) => { p.maxMana += 18; p.intellect += 5; return "Вы зарисовали аномалию в дневник (+18 макс. маны, +5 Знаний)!"; } },
+  { id: "s1_calamity", era: "first", age: 10, name: "⚡ 7. КАТАКЛИЗМ МАНЫ ФИТОА", desc: "Ослепительная вспышка разорвала небо и смела целую провинцию!",
+    action: (p, ws) => {
+      p.calamityTriggered = true;
+      if (ws) ws.calamityOccurred = true;
+      const targets = ["demon", "begaritt", "great_forest"];
+      const newReg = targets[Math.floor(Math.random() * targets.length)];
+      p.currentRegionKey = newReg;
+      p.relations.forEach(r => { if (r.isFamily) r.isLost = true; });
+      return `💥 <b>КАТАКЛИЗМ МАНЫ!</b> Вас выбросило на <b>${REGIONS[newReg].name}</b>! Семья рассеяна по свету!`;
     }
-  });
-  setText("char-languages-text", player.languages.map(l => LANGUAGES[l]?.name || l).join(", "));
-
-  const seatObj = ESTATES.find(e => e.id === player.familySeat);
-  const regen = (seatObj ? seatObj.hpRegen : 5) + (player.trait.id === "miko_healing" ? 25 : 0);
-  setText("hp-regen-hint", `(+${regen} HP/г.)`);
-  setText("hp-text", `${player.hp}/${player.maxHp}`);
-  if ($("hp-bar")) $("hp-bar").style.width = `${Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100))}%`;
-  setText("mana-text", `${player.mana}/${player.maxMana}`);
-  if ($("mana-bar")) $("mana-bar").style.width = `${Math.min(100, (player.mana / player.maxMana) * 100)}%`;
-
-  const injBanner = $("injuries-banner");
-  if (injBanner) {
-    injBanner.style.display = player.injuries.length ? "block" : "none";
-    injBanner.innerHTML = player.injuries.map(i => `<span class="badge-mythic" style="margin-right:4px;">⚠️ ${i.name}</span>`).join("");
-  }
-
-  if ($("estate-residence-badge")) $("estate-residence-badge").innerHTML = seatObj
-    ? `<span class="tag badge-rare">🏰 Родовой Замок: ${seatObj.name}</span>`
-    : `<span style="font-size:10px; color:var(--muted);">🏡 Нет назначенного замка</span>`;
-
-  if ($("powers-seat-badge")) $("powers-seat-badge").innerHTML = player.currentPowersSeat
-    ? `<span class="tag badge-mythic">🏆 Владыка #${player.currentPowersSeat} Семи Сил</span>` : "";
-
-  const jBox = $("job-badge-container");
-  if (jBox) {
-    let html = "";
-    if (player.currentJob) {
-      const r = getJobDataById(player.currentJob)?.ranks[player.jobRankIndex];
-      if (r) html += `<span class="tag badge-rare" style="margin-right:4px;">💼 ${r.title} (+${r.salary}🪙/г.)</span>`;
+  },
+  { id: "s1_hitogami_first_dream", era: "first", age: 11, name: "👁️ 8. Первый Сон Белого Пространства", desc: "Во сне возник безликий силуэт: «Я — Бог Людей Хитогами...»",
+    choices: [
+      { text: "Прислушаться к совету Хитогами (+55🪙, +15 Магии)", action: (p) => {
+        p.hitogamiTrust += 15; p.coins += 55; p.magicExp += 15;
+        return "Вы последовали голосу из сна и нашли схрон (+55🪙, +15 Магии, Доверие Хитогами +15)!";
+      }},
+      { text: "Отказать снам (+10 Знаний, +15 Севера)", action: (p) => {
+        p.hitogamiTrust -= 10; p.intellect += 10; p.northGodExp += 15;
+        return "Хитогами усмехнулся и исчез. Вы пробились сами (+10 Знаний, +15 Севера)!";
+      }}
+    ]
+  },
+  { id: "s1_demon_continent", era: "first", age: 12, name: "🌋 9. Переход через Багровые Пустоши", desc: "Выжить среди монстров и встретить воина-Спарда.",
+    action: (p) => { p.swordGodExp += 22; p.northGodExp += 18; p.maxHp += 20; return "Суровые бои на пустошах закалили тело (+22 Мечу, +18 Севера, +20 HP)!"; } },
+  { id: "s1_ocean_crossing", era: "first", age: 13, name: "🚢 10. Переправа в Милисион", desc: "Добраться до порта Ветров и переплыть океан.",
+    action: (p) => {
+      let found = p.relations.find(r => r.isLost);
+      if (found) { found.isLost = false; return `🎉 В лагере Милиса вы чудом нашли <b>${found.name}</b>!`; }
+      p.coins += 40; return "Вы переплыли океан, подрабатывая на судне (+40🪙).";
     }
-    if (player.currentUndergroundJob) {
-      const ur = UNDERGROUND_JOBS[player.currentRegionKey]?.ranks[player.undergroundRankIndex];
-      if (ur) html += `<span class="tag badge-mythic">🗡️ ${ur.title} (+${ur.salary}🪙/г.)</span>`;
+  },
+  { id: "s1_orsted_clash", era: "first", age: 14, name: "🐉 11. Встреча в Ущелье Красного Дракона", desc: "Перед вами возникает Бог Драконов Орстед. Проклятие душит вас!",
+    choices: [
+      { text: "Упасть на колени и промолчать (-20 HP, +8 Знаний)", action: (p) => { p.hp = Math.max(10, p.hp - 20); p.intellect += 8; return "Вы пережили ледяной взгляд Орстеда."; } },
+      { text: "Упомянуть Хитогами! (-70 HP, +25 маны)", action: (p) => { p.hp = Math.max(5, p.hp - 70); p.maxMana += 25; return "Орстед пробил вам грудь, но пощадил в последний миг!"; } }
+    ]
+  },
+  { id: "s1_fitoa_truth", era: "first", age: 15, name: "🏚️ 12. Руины родины и обелиск пропавших", desc: "Вернуться на пепелище Фитоа и прочесть списки погибших.",
+    action: (p) => { p.intellect += 10; p.coins += 25; return "Вы дали клятву защищать оставшихся близких (+10 Знаний, +25🪙)."; } },
+  { id: "s1_god_crossroads", era: "first", age: 16, name: "⚖️ 13. РАСПУТЬЕ БОГОВ: Орстед или Хитогами?", desc: "Сон Хитогами и тень Проклятого Дракона требуют выбора стороны!",
+    choices: [
+      { text: "🐉 Встать под знамя Орстеда (Союзник Дракона, Свет)", action: (p) => {
+        p.dynastyFaction = "orsted"; p.factionProgress += 20; p.reputation += 20; p.swordGodExp += 25; p.magicExp += 25;
+        return "Вы избрали путь союзника Бога Драконов! (+25 Мечу и Магии, +20 Света)!";
+      }},
+      { text: "👁️ Принять Сны Хитогами (Апостол Снов, +200🪙, +40 маны)", action: (p) => {
+        p.dynastyFaction = "hitogami"; p.hitogamiTrust += 40; p.reputation -= 15; p.coins += 200; p.maxMana += 40;
+        return "Вы стали Апостолом Снов! Хитогами раскрыл тайные клады (+200🪙, +40 макс. маны)!";
+      }}
+    ]
+  },
+  { id: "s1_academy_years", era: "first", age: 18, name: "🎓 14. Триумф в Академии Шарии", desc: "Дуэль со зверолюдьми и признание особого статуса студента.",
+    action: (p) => { p.magicExp += 30; p.intellect += 15; p.squadFame += 30; return "Вы покорили Академию (+30 Магии, +15 Знаний, +30 Славы)!"; } },
+  { id: "s1_begaritt_letter", era: "first", age: 21, name: "🏜️ 15. Письмо о беде в Лабиринте Бегаритта", desc: "Родные в ловушке пустыни! Пора идти через телепорт.",
+    action: (p) => { p.dungeonProgress["dung_teleport"] = Math.max(p.dungeonProgress["dung_teleport"] || 1, 5); p.swordGodExp += 25; return "Вы пробились вглубь Лабиринта (+25 Мечу)!"; } },
+  { id: "s1_labyrinth_guardian", era: "first", age: 23, name: "💎 16. Падение Магической Гидры", desc: "Решающая схватка в сердце лабиринта ради спасения семьи.",
+    action: (p) => {
+      let lost = p.relations.find(r => r.isLost);
+      if (lost) lost.isLost = false;
+      p.coins += 240; p.magicExp += 35;
+      return "Гидра повержена! Вы спасли родных и вынесли сокровища (+240🪙, +35 Магии)!";
     }
-    jBox.innerHTML = html || `<span style="font-size:10px; color:var(--muted);">💼 Без постоянной службы</span>`;
-  }
-
-  const titleObj = ASURA_POLITICS.nobilityTitles.find(t => t.id === player.nobilityTitle) || ASURA_POLITICS.nobilityTitles[0];
-  const fMap = { ariel: "Ариэль 👑", prince_first: "1-й Принц 🦁", prince_second: "2-й Принц 🐍" };
-  if ($("politics-badge-container")) $("politics-badge-container").innerHTML =
-    `<span class="tag badge-epic">👑 ${titleObj.name} • ${fMap[player.asuraFaction] || "Вне политики"} (Влияние: ${player.asuraInfluence})</span>`;
-
-  const facMap = {
-    orsted: `<span class="tag badge-rare">🐉 Знамя Орстеда (Прогресс: ${player.factionProgress})</span>`,
-    hitogami: `<span class="tag badge-legendary">👁️ Апостол Снов Хитогами (Доверие: ${player.hitogamiTrust})</span>`,
-    neutral: `<span style="font-size:10px; color:var(--muted);">⚖️ Сторона Богов: Не выбрана</span>`
-  };
-  if ($("faction-badge-container")) $("faction-badge-container").innerHTML = facMap[player.dynastyFaction] || facMap.neutral;
-
-  const lost = player.relations.filter(r => r.isLost);
-  if ($("calamity-status-banner")) {
-    $("calamity-status-banner").style.display = lost.length ? "block" : "none";
-    if (lost.length) $("calamity-status-banner").innerHTML = `<div style="background:#450a0a; border:1px solid #ef4444; border-radius:8px; padding:6px; font-size:11px; color:#fca5a5;">⚡ Пропали: ${lost.map(r => r.name).join(", ")}. Ищите их во вкладке «Мир & Род»!</div>`;
-  }
-
-  setText("magic", calculateRank(player.magicExp, MAGIC_RANKS));
-  setText("sword-god", calculateRank(player.swordGodExp, SWORD_RANKS));
-  setText("water-god", calculateRank(player.waterGodExp, SWORD_RANKS));
-  setText("north-god", calculateRank(player.northGodExp, SWORD_RANKS));
-  setText("intellect", player.intellect);
-  setText("coins", player.coins.toLocaleString());
-  setText("slot-weapon", player.equipment.weapon?.name || "Кулаки");
-  setText("slot-armor", player.equipment.armor?.name || "Одежда");
-  setText("slot-accessory", player.equipment.accessory?.name || "Нет");
-
-  renderLifeStorySection();
-  renderSevenPowersQuest();
-  renderEndgameFactionSection();
-}
-
-function updateUI() { renderUI(); saveGame(); }
-
-function switchTab(tabId) {
-  document.querySelectorAll(".tab-content").forEach(el => el.classList.remove("active"));
-  document.querySelectorAll(".nav-item").forEach(el => el.classList.remove("active"));
-  $(`tab-${tabId}`)?.classList.add("active");
-  const idx = { character: 0, activities: 1, inventory: 2, guild: 3, relations: 4 }[tabId];
-  document.querySelectorAll(".nav-item")[idx]?.classList.add("active");
-
-  if (tabId === "activities") renderActivities();
-  if (tabId === "inventory") { renderInventoryTab(); renderTestament(); renderFamilyCastle(); renderEstates(); renderCaravans(); }
-  if (tabId === "guild") { renderGuildTab(); renderSquad(); }
-  if (tabId === "relations") { renderRelations(); renderChaosBreaker(); renderGreyratBranches(); renderTablets(); renderLanguages(); }
-  playSound("click");
-}
-
-function setWorldSubTab(sub, btnEl) {
-  ["relations", "perugius", "greyrat", "tablets", "politics", "tree", "languages", "travel", "schools"].forEach(t => {
-    const el = $(`world-sub-${t}`);
-    if (el) el.style.display = t === sub ? "block" : "none";
-  });
-  btnEl?.parentElement?.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
-  btnEl?.classList.add("active");
-  ({ relations: renderRelations, perugius: renderChaosBreaker, greyrat: renderGreyratBranches, tablets: renderTablets, politics: renderPolitics, tree: renderDynastyTree, languages: renderLanguages, travel: renderTravelTab, schools: renderSchools })[sub]?.();
-  playSound("click");
-}
-
-// =========================================================================
-// СЮЖЕТНЫЕ ВЕХИ (1-Я ЖИЗНЬ + СЛЕДУЮЩИЕ ВЕКА)
-// =========================================================================
-function getAvailableStories() {
-  return STORY_ACTIVITIES.filter(s => {
-    if (player.storyCompleted.includes(s.id) || player.age < s.age) return false;
-    if (s.reqFaction && player.dynastyFaction !== s.reqFaction) return false;
-    if (s.era === "first") return player.isFirstEraLife;
-    if (s.era === "future") {
-      if (player.isFirstEraLife && worldState.currentWorldYear < 430) return false;
-      if (s.minYear && worldState.currentWorldYear < s.minYear) return false;
-      if (s.maxYear && worldState.currentWorldYear > s.maxYear) return false;
-      return true;
+  },
+  { id: "s1_asura_throne", era: "first", age: 26, name: "👑 17. Битва за Трон Асуры", desc: "Столкновение клинков в столице Арс и политический переворот.",
+    action: (p) => { p.asuraInfluence += 40; p.coins += 180; p.swordGodExp += 30; return "Ключевая роль в королевском перевороте (+40 влияния, +180🪙, +30 Мечу)!"; } },
+  { id: "s1_apostle_clash", era: "first", age: 29, name: "🌑 18. Ночь Теней: Удар Апостола", desc: "Враждебный Бог подослал убийцу, чтобы переломить вашу судьбу.",
+    action: (p) => {
+      if (p.dynastyFaction === "hitogami") { p.coins += 220; p.northGodExp += 35; return "По Сну Хитогами вы перебили лазутчиков Орстеда (+220🪙, +35 Севера)!"; }
+      p.swordGodExp += 35; p.magicExp += 35; return "Вы отбили ночную засаду Апостола (+35 Мечу и Магии)!";
     }
-    return false;
-  });
-}
-
-function renderLifeStorySection() {
-  const container = $("life-story-container"), badge = $("story-notify-badge");
-  if (!container) return;
-  const list = getAvailableStories();
-  if (badge) badge.style.display = list.length ? "inline-block" : "none";
-  if (!list.length) {
-    container.innerHTML = `<div style="font-size:11px; color:var(--muted); padding:6px;">Вехи текущего возраста и эпохи завершены. Взрослейте или переходите в новые века!</div>`;
-    return;
-  }
-  container.innerHTML = list.map(st => `
-    <div class="activity-card" style="border-color:var(--gold);">
-      <div class="act-info">
-        <div class="act-title-row"><span class="act-name" style="color:var(--gold);">${st.name}</span><span class="act-age-badge">с ${st.age} лет</span></div>
-        <div class="act-desc">${st.desc}</div>
-      </div>
-      <button style="background:linear-gradient(135deg,#b45309,#d97706); min-width:105px;" onclick="performStoryActivity('${st.id}')">✨ Свершить</button>
-    </div>`).join("");
-}
-
-function performStoryActivity(storyId) {
-  const st = STORY_ACTIVITIES.find(s => s.id === storyId);
-  if (!st || player.storyCompleted.includes(st.id)) return;
-  if (st.choices) {
-    triggerRandomEvent({
-      icon: "📜", title: st.name, desc: st.desc,
-      choices: st.choices.map(ch => ({
-        text: ch.text,
-        action: (p) => { p.storyCompleted.push(st.id); return ch.action(p, worldState); }
-      }))
-    });
-    return;
-  }
-  player.storyCompleted.push(st.id);
-  const res = st.action(player, worldState);
-  log(res);
-  playSound(st.id === "s1_calamity" ? "calamity" : "win");
-  showActionModal("Сюжетная Веха", res, "📜");
-  updateUI();
-}
-
-// =========================================================================
-// ДЕЛА, СЛУЖБА И ПОДПОЛЬЕ
-// =========================================================================
-function setActivityCategory(cat, btnEl) {
-  currentActivityCategory = cat;
-  btnEl?.parentElement?.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
-  btnEl?.classList.add("active");
-  renderActivities();
-  playSound("click");
-}
-
-function renderActivities() {
-  const container = $("activities-container");
-  if (!container) return;
-  container.innerHTML = "";
-  if (currentActivityCategory === "job") return renderJobMarket(container);
-  if (currentActivityCategory === "underground") return renderUndergroundMarket(container);
-
-  let list = ACTIVITIES.filter(a => player.age >= a.minAge && player.age <= a.maxAge);
-  if (currentActivityCategory !== "all") list = list.filter(a => a.category === currentActivityCategory);
-  if (!list.length) {
-    container.innerHTML = `<div style="color:var(--muted); text-align:center; padding:20px;">Нет дел в этой категории для возраста ${player.age} лет.</div>`;
-    return;
-  }
-  container.innerHTML = list.map(act => `
-    <div class="activity-card">
-      <div class="act-info">
-        <div class="act-title-row"><span class="act-name">${act.name}</span><span class="act-age-badge">${act.minAge}–${act.maxAge} л.</span></div>
-        <div class="act-desc">${act.desc}</div>
-        <div class="act-req">⚡ ${act.apCost} силы ${act.cost > 0 ? `• ${act.cost}🪙` : ""}</div>
-      </div>
-      <button class="act-btn" ${player.ap >= act.apCost ? "" : "disabled"} onclick="performActivity('${act.id}')">${player.ap >= act.apCost ? "Делать" : "Устал"}</button>
-    </div>`).join("");
-}
-
-function performActivity(actId) {
-  const act = ACTIVITIES.find(a => a.id === actId);
-  if (!act) return;
-  if (player.ap < act.apCost) return showActionModal("Усталость", "Нажмите «Прожить 1 год», чтобы восстановить силы.", "💤");
-  if (act.cost && player.coins < act.cost) return showActionModal("Нехватка монет", `Требуется ${act.cost}🪙.`, "🪙");
-  player.ap -= act.apCost;
-  const msg = act.action(player);
-  log(msg);
-  playSound(act.category === "combat" ? "sword" : act.category === "magic" ? "magic" : "click");
-  showActionModal(act.name, msg, "✨");
-  updateUI();
-  renderActivities();
-}
-
-function getJobDataById(id) {
-  for (const reg in REGIONAL_JOBS) {
-    const j = REGIONAL_JOBS[reg].find(x => x.id === id);
-    if (j) return j;
-  }
-  return null;
-}
-
-function meetsJobReq(r) {
-  return player.age >= r.minAge && (!r.minSword || player.swordGodExp >= r.minSword) && (!r.minMagic || player.magicExp >= r.minMagic) && (!r.minInt || player.intellect >= r.minInt) && (!r.minNorth || player.northGodExp >= r.minNorth);
-}
-
-function renderJobMarket(container) {
-  if (player.currentJob) {
-    const jData = getJobDataById(player.currentJob);
-    const cur = jData?.ranks[player.jobRankIndex], next = jData?.ranks[player.jobRankIndex + 1];
-    if (cur) {
-      container.innerHTML = `<div class="card" style="background:#131b2e; border-color:#38bdf8;">
-        <b style="color:#38bdf8;">💼 ${jData.name}</b>
-        <div style="font-size:12px; margin-top:4px;">Чин: <b>${cur.title}</b> (+${cur.salary}🪙/г.)</div>
-        <div style="font-size:11px; color:var(--muted);">${cur.desc}</div>
-        ${next ? `<div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:8px;">
-          <div style="font-size:11px; color:var(--accent-light);">Следующий чин: <b>${next.title}</b> (+${next.salary}🪙)</div>
-          <div style="font-size:10px; color:var(--muted);">С ${next.minAge} л. ${next.minSword ? `• Меч ${next.minSword}+` : ""} ${next.minMagic ? `• Магия ${next.minMagic}+` : ""} ${next.minInt ? `• Знания ${next.minInt}+` : ""}</div>
-          <button style="margin-top:6px; width:100%; background:#2563eb;" onclick="tryJobPromotion()">🎖️ Повышение</button>
-        </div>` : `<div style="color:var(--gold); font-size:11px; margin-top:6px;">🌟 Вершина службы!</div>`}
-        <button class="action-danger" style="margin-top:8px; width:100%; font-size:11px;" onclick="quitJob()">Уйти в отставку</button>
-      </div>`;
-      return;
-    }
-  }
-  const jobs = REGIONAL_JOBS[player.currentRegionKey] || [];
-  container.innerHTML = `<div style="font-size:12px; color:var(--muted); margin-bottom:8px;">Службы (${REGIONS[player.currentRegionKey].name}):</div>` +
-    jobs.map(jb => {
-      const r0 = jb.ranks[0], ok = meetsJobReq(r0);
-      return `<div class="job-card"><div><b>${jb.name}</b><div style="font-size:11px; color:var(--muted);">${r0.title} (+${r0.salary}🪙/г.) • с ${r0.minAge} л.</div></div>
-        <button ${ok ? "" : "disabled"} style="background:#1d4ed8;" onclick="applyForJob('${jb.id}')">${ok ? "Поступить" : "Не годен"}</button></div>`;
-    }).join("");
-}
-
-function applyForJob(id) {
-  const j = getJobDataById(id); if (!j) return;
-  player.currentJob = id; player.jobRankIndex = 0;
-  const msg = `Вы приняты на службу: <b>${j.name}</b> (${j.ranks[0].title})!`;
-  log(msg); playSound("win"); showActionModal("Служба", msg, "💼"); updateUI(); renderActivities();
-}
-function tryJobPromotion() {
-  const next = getJobDataById(player.currentJob)?.ranks[player.jobRankIndex + 1];
-  if (next && meetsJobReq(next)) {
-    player.jobRankIndex++;
-    const msg = `<b>ПОВЫШЕНИЕ!</b> Новый чин: <b>${next.title}</b> (+${next.salary}🪙/г.)!`;
-    log(msg); playSound("win"); showActionModal("Повышение", msg, "🎖️");
-  } else showActionModal("Отказ", "Не хватает возраста или навыков!", "❌");
-  updateUI(); renderActivities();
-}
-function quitJob() { player.currentJob = null; player.jobRankIndex = 0; log("Вы ушли со службы."); updateUI(); renderActivities(); }
-
-function renderUndergroundMarket(container) {
-  const uJob = UNDERGROUND_JOBS[player.currentRegionKey];
-  if (!uJob) { container.innerHTML = `<div style="color:var(--muted);">Нет подполья в регионе.</div>`; return; }
-  if (player.currentUndergroundJob) {
-    const cur = uJob.ranks[player.undergroundRankIndex], next = uJob.ranks[player.undergroundRankIndex + 1];
-    container.innerHTML = `<div class="card" style="background:#201115; border-color:#ef4444;">
-      <b style="color:#f87171;">🗡️ ${uJob.name}</b>
-      <div style="font-size:12px; margin-top:4px;">Роль: <b>${cur.title}</b> (+${cur.salary}🪙/г. • Риск: ${Math.round(cur.risk * 100)}%)</div>
-      ${next ? `<button style="margin-top:8px; width:100%; background:#b91c1c;" onclick="tryUndergroundPromotion()">💀 Повыситься: ${next.title} (+${next.salary}🪙)</button>` : `<div style="color:var(--gold); font-size:11px; margin-top:6px;">👑 Владыка подполья!</div>`}
-      <button class="action-danger" style="margin-top:8px; width:100%; font-size:11px;" onclick="quitUndergroundJob()">Залечь на дно</button>
-    </div>`;
-    return;
-  }
-  const r0 = uJob.ranks[0], ok = player.age >= r0.minAge;
-  container.innerHTML = `<div class="job-card" style="border-color:#7f1d1d;">
-    <div><b style="color:#f87171;">${uJob.name}</b><div style="font-size:11px; color:var(--muted);">${r0.title} (+${r0.salary}🪙/г.) • Риск ${Math.round(r0.risk * 100)}%</div></div>
-    <button ${ok ? "" : "disabled"} style="background:#991b1b;" onclick="applyForUndergroundJob()">${ok ? "Вступить" : "Рано"}</button></div>`;
-}
-
-function applyForUndergroundJob() {
-  const u = UNDERGROUND_JOBS[player.currentRegionKey];
-  player.currentUndergroundJob = u.id; player.undergroundRankIndex = 0;
-  const msg = `Вы вступили в <b>${u.name}</b>!`;
-  log(msg); playSound("death"); showActionModal("Подполье", msg, "🗡️"); updateUI(); renderActivities();
-}
-function tryUndergroundPromotion() {
-  const next = UNDERGROUND_JOBS[player.currentRegionKey]?.ranks[player.undergroundRankIndex + 1];
-  if (next && meetsJobReq(next)) {
-    player.undergroundRankIndex++;
-    const msg = `💀 Новая ступень в синдикате: <b>${next.title}</b> (+${next.salary}🪙/г.)!`;
-    log(msg); playSound("win"); showActionModal("Синдикат", msg, "💀");
-  } else showActionModal("Отказ", "Недостаточно боевого опыта или возраста!", "❌");
-  updateUI(); renderActivities();
-}
-function quitUndergroundJob() { player.currentUndergroundJob = null; player.undergroundRankIndex = 0; log("Вы залегли на дно."); updateUI(); renderActivities(); }
-
-// =========================================================================
-// ИМУЩЕСТВО, ЗАВЕЩАНИЕ, РЕЛИКВИЯ, ЗАМОК, КАРАВАНЫ И ИНВЕНТАРЬ
-// =========================================================================
-function renderTestament() {
-  const cont = $("testament-container"); if (!cont) return;
-  const children = player.children.filter(c => !c.isDead);
-  const heir = children.find(c => c.id === player.appointedHeirId);
-  const eqButtons = ["weapon", "armor", "accessory"].filter(s => player.equipment[s]).map(s => {
-    const isH = player.heirloomSlot === s;
-    return `<button style="font-size:10px; padding:5px 8px; background:${isH ? "#d97706" : "#1f2937"};" onclick="setHeirloom('${s}')">${isH ? "✨ Реликвия: " : "Завещать: "}${player.equipment[s].name}</button>`;
-  }).join("");
-
-  cont.innerHTML = `<div class="testament-card" style="background:#1b1828; border-color:#c084fc;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <b style="color:#e9d5ff; font-size:13px;">📜 Завещание и Фамильная Реликвия</b>
-      <span class="badge-legendary">${heir ? heir.name : "Не выбран"}</span>
-    </div>
-    <div style="font-size:11px; color:var(--muted); margin:4px 0;">Наследник получает <b>100% казны</b>, замки, титул Семи Сил и 1 Фамильную Реликвию!</div>
-    ${children.length ? `<div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:6px;">
-      ${children.map(c => `<button style="font-size:10px; padding:5px 8px; background:${player.appointedHeirId === c.id ? "#059669" : "#312e81"};" onclick="appointTestamentHeir('${c.id}')">${player.appointedHeirId === c.id ? "👑 " : ""}${c.name}</button>`).join("")}
-    </div>` : `<div style="font-size:11px; color:#fbbf24;">Заведите ребенка в браке, чтобы выбрать преемника!</div>`}
-    ${eqButtons ? `<div style="margin-top:8px; border-top:1px solid rgba(255,255,255,0.08); padding-top:6px;"><div style="font-size:10px; color:var(--gold); margin-bottom:4px;">Фамильная Реликвия (перейдёт к наследнику):</div><div style="display:flex; gap:6px; flex-wrap:wrap;">${eqButtons}</div></div>` : ""}
-  </div>`;
-}
-
-function appointTestamentHeir(id) {
-  player.appointedHeirId = id;
-  const c = player.children.find(x => x.id === id);
-  log(`👑 Наследником назначен(а) <b>${c?.name}</b>.`);
-  playSound("win"); updateUI(); renderTestament();
-}
-
-function setHeirloom(slot) {
-  player.heirloomSlot = player.heirloomSlot === slot ? null : slot;
-  if (player.heirloomSlot) log(`✨ <b>${player.equipment[slot].name}</b> объявлена Фамильной Реликвией рода!`);
-  playSound("coin"); updateUI(); renderTestament();
-}
-
-function renderFamilyCastle() {
-  const cont = $("family-castle-container"); if (!cont) return;
-  if (!player.estates.length) { cont.innerHTML = `<div style="font-size:11px; color:var(--muted);">Купите имение ниже, чтобы сделать его Замком рода.</div>`; return; }
-  const seat = ESTATES.find(e => e.id === player.familySeat);
-  let html = `<div class="castle-card" style="background:#1e1a2f; border-color:#8b5cf6;">
-    <div style="display:flex; justify-content:space-between;"><b style="color:#e9d5ff;">🏰 Родовое Гнездо</b><span class="badge-legendary">${seat ? seat.name : "Не выбрано"}</span></div>
-    <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
-      ${player.estates.map(id => {
-        const e = ESTATES.find(x => x.id === id), isS = player.familySeat === id;
-        return `<button style="font-size:10px; padding:5px 8px; background:${isS ? "#059669" : "#312e81"};" onclick="setFamilySeat('${id}')">${isS ? "✓ " : "Сделать главной: "}${e.name}</button>`;
-      }).join("")}
-    </div></div>`;
-  if (player.familySeat) {
-    html += `<div class="section-title">Улучшения Замка</div>` + CASTLE_UPGRADES.map(u => {
-      const built = player.castleUpgrades.includes(u.id);
-      return `<div class="shop-item"><div><b>${u.name}</b> ${built ? '<span style="color:var(--green); font-size:10px;">✓</span>' : ""}<div style="font-size:11px; color:var(--muted);">${u.desc}</div><div style="font-size:10px; color:var(--gold);">${u.cost}🪙</div></div>
-        <button ${built ? "disabled" : ""} style="background:${built ? "#059669" : "#4338ca"};" onclick="buildCastleUpgrade('${u.id}')">${built ? "Готово" : "Возвести"}</button></div>`;
-    }).join("");
-    if (player.castleUpgrades.includes("crypt")) {
-      const cd = 5 - (player.age - player.lastCryptMeditationAge);
-      html += `<div class="card" style="background:#181422; border-color:#a855f7; display:flex; justify-content:space-between; align-items:center;">
-        <div><b style="color:#f3e8ff; font-size:12px;">🕯️ Склеп Предков</b><div style="font-size:10px; color:var(--muted);">Молитва раз в 5 лет (+25 к Мечу/Магии, 100% HP/Маны).</div></div>
-        <button ${cd <= 0 ? "" : "disabled"} style="background:#7e22ce; font-size:11px;" onclick="meditateInCrypt()">${cd <= 0 ? "Молиться" : `${cd} л.`}</button></div>`;
-    }
-  }
-  cont.innerHTML = html;
-}
-
-function setFamilySeat(id) { player.familySeat = id; log(`🏰 Главным замком назначен: ${ESTATES.find(e => e.id === id)?.name}.`); playSound("win"); updateUI(); renderFamilyCastle(); }
-function buildCastleUpgrade(id) {
-  const u = CASTLE_UPGRADES.find(x => x.id === id); if (!u || player.coins < u.cost) return showActionModal("Золото", `Нужно ${u?.cost}🪙!`, "🪙");
-  player.coins -= u.cost; player.castleUpgrades.push(id);
-  log(`🛠️ Возведено: <b>${u.name}</b>!`); playSound("win"); updateUI(); renderFamilyCastle();
-}
-function meditateInCrypt() {
-  player.lastCryptMeditationAge = player.age; player.hp = player.maxHp; player.mana = player.maxMana; player.swordGodExp += 25; player.magicExp += 25;
-  const msg = "Духи предков благословили ваш клинок и разум (+25 Мечу и Магии, полное восстановление)!";
-  log(`🕯️ ${msg}`); playSound("magic"); showActionModal("Склеп Предков", msg, "🕯️"); updateUI(); renderFamilyCastle();
-}
-
-function renderCaravans() {
-  const cont = $("caravans-container"); if (!cont) return;
-  cont.innerHTML = CARAVAN_ROUTES.map(r => `
-    <div class="caravan-card"><div><b>${r.name}</b><div style="font-size:11px; color:var(--muted);">${r.desc}</div>
-      <div style="font-size:10px; color:var(--gold);">Вклад: ${r.cost}🪙 • Возврат: +${r.reward}🪙 • Риск: ${Math.round(r.risk * 100)}%</div></div>
-      <button style="background:#0284c7;" onclick="dispatchCaravan('${r.id}')">Отправить</button></div>`).join("");
-}
-
-function dispatchCaravan(id) {
-  if (player.ap < 1) return showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤");
-  const r = CARAVAN_ROUTES.find(x => x.id === id);
-  if (!r || player.coins < r.cost) return showActionModal("Золото", `Нужно ${r?.cost}🪙!`, "🪙");
-  player.ap -= 1; player.coins -= r.cost;
-  const hasVault = player.castleUpgrades.includes("grand_vault");
-  const risk = Math.max(0.05, r.risk - (hasVault ? 0.05 : 0) - (player.squad.length >= 3 ? 0.1 : 0));
-  if (Math.random() < risk) {
-    const msg = `⚠️ Засада разбойников на пути «${r.name}»! Потеряно ${r.cost}🪙.`;
-    log(msg); playSound("death"); showActionModal("Нападение!", msg, "⚔️");
-  } else {
-    const reward = hasVault ? Math.round(r.reward * 1.1) : r.reward;
-    player.coins += reward;
-    const msg = `🎉 Караван прибыл! Получено <b>+${reward}🪙</b>!`;
-    log(msg); playSound("coin"); showActionModal("Прибыль!", msg, "🐪");
-  }
-  updateUI();
-}
-
-function renderEstates() {
-  const cont = $("estate-container"); if (!cont) return;
-  cont.innerHTML = ESTATES.map(e => {
-    const owned = player.estates.includes(e.id);
-    return `<div class="estate-card"><div><b>${e.name}</b> ${owned ? '<span style="color:var(--green); font-size:11px;">✓</span>' : ""}
-      <div style="font-size:11px; color:var(--muted);">${e.desc}</div><div style="font-size:10px; color:var(--gold);">Цена: ${e.cost.toLocaleString()}🪙</div></div>
-      <button ${owned ? "disabled" : ""} style="background:${owned ? "#059669" : "#312e81"};" onclick="buyEstate('${e.id}')">${owned ? "Куплено" : "Купить"}</button></div>`;
-  }).join("");
-}
-
-function buyEstate(id) {
-  const e = ESTATES.find(x => x.id === id);
-  if (!e || player.coins < e.cost) return showActionModal("Золото", "Недостаточно монет!", "🪙");
-  player.coins -= e.cost; player.estates.push(id);
-  if (!player.familySeat) player.familySeat = id;
-  log(`🏰 Приобретено: <b>${e.name}</b>!`); playSound("win"); updateUI(); renderEstates(); renderFamilyCastle();
-}
-
-function getShopPrice(item) {
-  return (player.currentRegionKey === "demon" && player.languages.includes("demon")) ? Math.max(1, Math.floor(item.cost * 0.8)) : item.cost;
-}
-
-function renderInventoryTab() {
-  const inv = $("inventory-list");
-  if (inv) {
-    let html = "";
-    if (player.potionsCount > 0) html += `<div class="shop-item"><div><b>🧪 Зелье Исцеления</b> (${player.potionsCount} шт.)<div style="font-size:11px; color:var(--muted);">+60 HP</div></div><button onclick="usePotionOutOfCombat()">Пить</button></div>`;
-    html += player.inventory.map((it, i) => `
-      <div class="shop-item"><div><b>${it.name}</b> (+${it.cp} БМ)<div style="font-size:11px; color:var(--muted);">${it.desc}</div></div>
-      <div style="display:flex; gap:5px;"><button style="background:#4338ca; padding:6px 9px; font-size:11px;" onclick="equipItem(${i})">Надеть</button>
-      <button class="btn-sell" onclick="sellInventoryItem(${i})">+${Math.max(5, Math.floor(it.cost * 0.5))}🪙</button></div></div>`).join("");
-    inv.innerHTML = html || `<div style="font-size:12px; color:var(--muted);">Рюкзак пуст.</div>`;
-  }
-  const shop = $("shop-list");
-  if (shop) {
-    const items = currentShopCategory === "all" ? SHOP_ITEMS : SHOP_ITEMS.filter(i => currentShopCategory === "artifact" ? (i.type === "accessory" || i.type === "potion") : i.type === currentShopCategory);
-    shop.innerHTML = items.map(it => {
-      const price = getShopPrice(it);
-      return `<div class="shop-item"><div><b>${it.name}</b> <span style="color:var(--gold); font-size:11px;">${price}🪙</span><div style="font-size:11px; color:var(--muted);">${it.desc}</div></div>
-        <button onclick="buyShopItem('${it.id}')">Купить</button></div>`;
-    }).join("");
-  }
-}
-
-function setShopCategory(cat, btnEl) {
-  currentShopCategory = cat;
-  btnEl?.parentElement?.querySelectorAll(".sub-tab-btn").forEach(b => b.classList.remove("active"));
-  btnEl?.classList.add("active");
-  renderInventoryTab(); playSound("click");
-}
-
-function buyShopItem(id) {
-  const it = SHOP_ITEMS.find(i => i.id === id); if (!it) return;
-  const price = getShopPrice(it);
-  if (player.coins < price) return showActionModal("Золото", `Нужно ${price}🪙!`, "🪙");
-  player.coins -= price;
-  if (it.type === "potion") player.potionsCount++; else player.inventory.push({ ...it });
-  log(`🛒 Куплено: <b>${it.name}</b> (${price}🪙).`); playSound("coin"); updateUI(); renderInventoryTab();
-}
-
-function sellInventoryItem(idx) {
-  const it = player.inventory[idx]; if (!it) return;
-  const val = Math.max(5, Math.floor(it.cost * 0.5));
-  player.coins += val; player.inventory.splice(idx, 1);
-  log(`🪙 Продано: ${it.name} (+${val}🪙).`); playSound("coin"); updateUI(); renderInventoryTab();
-}
-
-function equipItem(idx) {
-  const it = player.inventory[idx]; if (!it) return;
-  const slot = it.type;
-  if (player.equipment[slot]) unequipSlot(slot, true);
-  player.equipment[slot] = it;
-  if (it.hp) { player.maxHp += it.hp; player.hp += it.hp; }
-  player.inventory.splice(idx, 1);
-  log(`⚔️ Надето: <b>${it.name}</b>.`); playSound("sword"); updateUI(); renderInventoryTab(); renderTestament();
-}
-
-function unequipSlot(slot, silent = false) {
-  const it = player.equipment[slot]; if (!it) return;
-  if (it.hp) { player.maxHp = Math.max(20, player.maxHp - it.hp); player.hp = Math.min(player.hp, player.maxHp); }
-  if (player.heirloomSlot === slot) player.heirloomSlot = null;
-  player.inventory.push(it); player.equipment[slot] = null;
-  if (!silent) { log(`Снято: ${it.name}.`); playSound("click"); updateUI(); renderInventoryTab(); renderTestament(); }
-}
-
-function usePotionOutOfCombat() {
-  if (player.potionsCount <= 0) return;
-  player.potionsCount--; player.hp = Math.min(player.maxHp, player.hp + 60);
-  log("🧪 Выпито зелье (+60 HP)."); playSound("coin"); updateUI(); renderInventoryTab();
-}
-
-// =========================================================================
-// ГИЛЬДИЯ, ОТРЯД, ЛАБИРИНТЫ, 7 СИЛ И ДВОЙНОЙ ЭНДГЕЙМ
-// =========================================================================
-function renderGuildTab() {
-  setText("guild-status-tag", `Ранг: ${player.guildRank}`);
-  const nextRank = ADVENTURER_RANKS[ADVENTURER_RANKS.indexOf(player.guildRank) + 1];
-  setText("guild-exp-text", `${player.guildExp} / ${nextRank ? ADVENTURER_REQ[nextRank] : "MAX"} GP`);
-  renderPowersMonument(); renderSevenPowersQuest(); renderEndgameFactionSection();
-
-  const dCont = $("dungeon-container");
-  if (dCont) {
-    const pIdx = ADVENTURER_RANKS.indexOf(player.guildRank);
-    dCont.innerHTML = DUNGEONS.map(d => {
-      const floor = player.dungeonProgress[d.id] || 1, done = floor > d.maxFloors, ok = player.age >= 10 && pIdx >= ADVENTURER_RANKS.indexOf(d.reqRank);
-      return `<div class="card" style="margin-bottom:8px;">
-        <div style="display:flex; justify-content:space-between;"><b style="font-size:13px;">${d.name}</b><span class="tag badge-rare">Ранг ${d.reqRank}+</span></div>
-        <div style="font-size:11px; color:var(--muted); margin:4px 0;">${d.desc}</div>
-        <div style="font-size:11px; color:var(--accent-light);">${done ? "👑 Покорен!" : `Этаж ${floor} из ${d.maxFloors}`}</div>
-        <button ${!ok || done ? "disabled" : ""} onclick="openDungeonExploration('${d.id}')" style="margin-top:6px; background:#4338ca; width:100%;">
-          ${done ? "✓ Зачищен" : ok ? "Войти в Лабиринт (⚡ 1 сила)" : `Нужен ранг ${d.reqRank} (с 10 л.)`}
-        </button></div>`;
-    }).join("");
-  }
-
-  const qCont = $("guild-quests-list");
-  if (qCont) {
-    if (player.age < 10) qCont.innerHTML = `<div style="color:var(--muted); text-align:center;">Гильдия открыта с 10 лет!</div>`;
-    else if (!player.guildQuestsThisYear.length) qCont.innerHTML = `<div style="color:var(--muted); text-align:center;">Заказы года выполнены!</div>`;
-    else qCont.innerHTML = player.guildQuestsThisYear.map(q => `
-      <div class="quest-card"><div><span class="tag badge-rare">Ранг ${q.rank}</span> <b style="display:block; margin:2px 0;">${q.name}</b>
-        <div style="font-size:11px; color:var(--muted);">${q.enemy} • БМ ${q.cp.toLocaleString()}</div>
-        <div style="font-size:11px; color:var(--gold);">+${q.reward}🪙 • +${q.gp} GP • ⚡ 2 силы</div></div>
-        <button ${player.ap >= 2 ? "" : "disabled"} style="background:#312e81;" onclick="startGuildBattle('${q.id}')">${player.ap >= 2 ? "В бой" : "Нет сил"}</button></div>`).join("");
-  }
-}
-
-function openDungeonExploration(id) {
-  if (player.ap < 1) return showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤");
-  player.ap -= 1;
-  if (checkSquadBetrayal()) return;
-  const d = DUNGEONS.find(x => x.id === id);
-  player.dungeonProgress[id] = player.dungeonProgress[id] || 1;
-  activeDungeon = { id, obj: d };
-  updateDungeonModalUI("Вы ступили под древние своды лабиринта.");
-  if ($("dungeon-modal")) $("dungeon-modal").style.display = "flex";
-  playSound("sword");
-}
-
-function updateDungeonModalUI(text) {
-  if (!activeDungeon) return;
-  const d = activeDungeon.obj, floor = player.dungeonProgress[d.id];
-  setText("dung-modal-title", d.name);
-  setText("dung-modal-floor-info", floor > d.maxFloors ? "Покорен!" : `Этаж ${floor} из ${d.maxFloors}`);
-  setText("dung-hp-text", `${player.hp}/${player.maxHp}`);
-  if ($("dung-hp-bar")) $("dung-hp-bar").style.width = `${Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100))}%`;
-  if ($("dung-modal-body")) $("dung-modal-body").innerHTML = text;
-  const box = $("dung-modal-actions"); if (!box) return;
-  box.innerHTML = floor > d.maxFloors
-    ? `<button class="btn-main" onclick="closeDungeonModal()">👑 Покинуть лабиринт</button>`
-    : `<button style="background:#4338ca;" onclick="dungeonTurn('fight')">⚔️ Пробиваться через этаж</button>
-       <button style="background:#1d4ed8;" onclick="dungeonTurn('scout')">👁️ Разведка тайников</button>
-       <button style="background:#059669;" onclick="dungeonTurn('rest')">🧪 Привал (+30 HP, +20 маны)</button>
-       <button class="action-danger" onclick="closeDungeonModal()">🏃 Выйти наружу</button>`;
-}
-
-function dungeonTurn(choice) {
-  if (!activeDungeon) return;
-  const d = activeDungeon.obj, floor = player.dungeonProgress[d.id];
-  const hasManaSight = player.demonEyes.left?.id === "mana_sight" || player.demonEyes.right?.id === "mana_sight";
-  let txt = "";
-  if (choice === "rest") {
-    player.hp = Math.min(player.maxHp, player.hp + 30); player.mana = Math.min(player.maxMana, player.mana + 20);
-    txt = "Отряд перевёл дух (+30 HP, +20 маны)."; playSound("magic");
-  } else if (choice === "scout") {
-    const r = Math.random();
-    if (r < 0.35 && floor > 1) {
-      if (hasManaSight) txt = "🔮 <b>Глаз Маны</b> раскрыл ловушку телепортации и уберёг отряд!";
-      else { const back = Math.min(floor - 1, 2); player.dungeonProgress[d.id] -= back; txt = `🌀 Ловушка отбросила вас на -${back} этажа!`; playSound("calamity"); }
-    } else if (r < 0.7) {
-      const gold = Math.floor(Math.random() * 90) + 45; player.coins += gold;
-      txt = `💎 В тайнике найден клад (+${gold}🪙)!`; playSound("coin");
-    } else { player.dungeonProgress[d.id]++; txt = `Вы нашли тайный спуск на ${player.dungeonProgress[d.id]} этаж!`; playSound("win"); }
-  } else {
-    const mCp = Math.floor(d.cpBase * (1 + floor * 0.45)), dmg = Math.floor(mCp / (calcSquadCombatPower(player) + 100) * 20) + 10;
-    player.hp -= dmg;
-    if (dmg > 35 && Math.random() < 0.22 && !player.injuries.some(i => i.id === "lost_arm")) {
-      player.injuries.push({ id: "lost_arm", name: "Утрата левой руки" });
-      txt = `🩸 <b>ТРАВМА!</b> Вы потеряли руку (-${dmg} HP)! Ищите Протез или Целителя Милиса.`; playSound("death");
-    } else { txt = `⚔️ Стражи ${floor} этажа повержены (-${dmg} HP)!`; playSound("sword"); }
-    player.dungeonProgress[d.id]++;
-  }
-  if (player.dungeonProgress[d.id] > d.maxFloors) {
-    const drop = SHOP_ITEMS.find(i => i.id === d.dropArtifact);
-    if (drop && !player.inventory.some(x => x.id === drop.id)) player.inventory.push({ ...drop });
-    player.coins += 800; player.guildExp += 150; player.squadFame += 150;
-    txt = `👑 <b>ПОБЕДА!</b> ${d.name} зачищен! Награда: <b>${drop?.name}</b> (+800🪙, +150 GP)!`;
-    log(txt); playSound("win");
-  }
-  updateDungeonModalUI(txt); updateUI();
-  if (player.hp <= 0) { closeDungeonModal(); handleDeath(`Сгинул в недрах: ${d.name}`); }
-}
-
-function closeDungeonModal() { if ($("dungeon-modal")) $("dungeon-modal").style.display = "none"; activeDungeon = null; updateUI(); renderGuildTab(); }
-
-function renderPowersMonument() {
-  const cont = $("powers-monument-list"); if (!cont) return;
-  cont.innerHTML = worldState.sevenPowers.map(pow => {
-    const isMe = player.currentPowersSeat === pow.rank;
-    const found = player.discoveredSevenPowers.includes(pow.rank);
-    return `<div class="power-row ${isMe ? "power-player" : ""}">
-      <div style="display:flex; align-items:center;"><span class="power-rank">#${pow.rank}</span>
-        <div><b>${isMe ? `${player.name} (ВЫ!)` : `${pow.title} — ${pow.name}`}</b>
-        <div style="font-size:10px; color:var(--muted);">${isMe ? `Ваш трон • ${calcCombatPower(player).toLocaleString()} БМ` : `Мощь: ${pow.cp.toLocaleString()} БМ`}</div></div></div>
-      <div>${isMe ? `<span class="badge-legendary">ВАШ ТИТУЛ 👑</span>` : `<button class="btn-challenge" ${found ? "" : "disabled"} onclick="challengeSevenPower(${pow.rank})">${found ? "⚔️ Вызов" : "🔒 Не найден"}</button>`}</div>
-    </div>`;
-  }).join("");
-}
-
-function renderSevenPowersQuest() {
-  const cont = $("seven-powers-quest-container"), badge = $("seven-powers-notify");
-  if (!cont) return;
-  const nextQ = SEVEN_POWERS_QUESTS.find(q => player.currentPowersSeat !== q.rank && !player.discoveredSevenPowers.includes(q.rank));
-  if (!nextQ) { if (badge) badge.style.display = "none"; cont.innerHTML = `<div style="font-size:11px; color:var(--muted);">Все доступные владыки выслежены!</div>`; return; }
-  const myCp = calcCombatPower(player), canTrack = myCp >= nextQ.reqCp, inReg = player.currentRegionKey === nextQ.regionKey;
-  if (badge) badge.style.display = canTrack ? "inline-block" : "none";
-  cont.innerHTML = `<div class="powers-quest-card">
-    <div style="display:flex; justify-content:space-between;"><b style="color:#f59e0b; font-size:13px;">🔍 #${nextQ.rank}: ${nextQ.title}</b><span class="badge-rare">${nextQ.reqCp.toLocaleString()} БМ</span></div>
-    <div style="font-size:11px; color:var(--muted); margin:4px 0;">${nextQ.desc} (${REGIONS[nextQ.regionKey].name})</div>
-    <button ${canTrack && inReg ? "" : "disabled"} style="background:#d97706; width:100%;" onclick="trackSevenPower(${nextQ.rank})">
-      ${!canTrack ? `Нужно ${nextQ.reqCp.toLocaleString()} БМ` : !inReg ? `Прибудьте в ${REGIONS[nextQ.regionKey].name}` : "🧭 Выследить Владыку (⚡ 1 сила)"}
-    </button></div>`;
-}
-
-function trackSevenPower(rank) {
-  if (player.ap < 1) return showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤");
-  player.ap -= 1; player.discoveredSevenPowers.push(rank);
-  const pow = worldState.sevenPowers.find(p => p.rank === rank);
-  const msg = `🧭 Вы выследили #${rank} ${pow.title} — <b>${pow.name}</b>! Бросайте вызов на Монументе.`;
-  log(msg); playSound("win"); showActionModal("Владыка найден!", msg, "🏆"); updateUI(); renderGuildTab();
-}
-
-function vacatePowerSeatToWorld(prevHero, reasonText = "пал без преемников") {
-  if (!prevHero?.currentPowersSeat) return;
-  const pow = worldState.sevenPowers.find(p => p.rank === prevHero.currentPowersSeat);
-  if (!pow) return;
-  const pool = REPLACEMENT_MASTERS[pow.rank] || ["Безымянный Мастер"];
-  const newName = pool[Math.floor(Math.random() * pool.length)];
-  pow.name = newName; pow.holderType = "npc"; pow.isDead = false;
-  pow.cp = SEVEN_GREAT_POWERS.find(x => x.rank === pow.rank)?.cp || pow.cp;
-  pow.hp = pow.maxHp;
-  worldState.chronicles.push({ year: worldState.currentWorldYear, text: `🏆 После того как ${prevHero.name} ${reasonText}, трон #${pow.rank} (${pow.title}) занял(а) <b>${newName}</b>!` });
-}
-
-function renderEndgameFactionSection() {
-  const cont = $("endgame-faction-section"); if (!cont) return;
-  const cfg = FACTION_ENDGAMES[player.dynastyFaction];
-  if (!cfg || player.generation < cfg.reqGen) { cont.innerHTML = ""; return; }
-  const myCp = calcCombatPower(player), ok = myCp >= cfg.reqCp;
-  cont.innerHTML = `<div class="${cfg.cardClass}">
-    <div style="display:flex; justify-content:space-between;"><b style="color:#fff; font-size:13px;">${cfg.title}</b><span class="badge-mythic">Поколение ${player.generation}/${cfg.reqGen}+</span></div>
-    <div style="font-size:11px; color:#e2e8f0; margin:6px 0;">${cfg.desc}</div>
-    <button ${ok ? "" : "disabled"} style="background:linear-gradient(135deg,#7c3aed,#4c1d95); width:100%;" onclick="startFactionEndgameRaid()">
-      ${ok ? cfg.btnText : `Требуется ${cfg.reqCp.toLocaleString()} БМ`}
-    </button></div>`;
-}
-
-function openBattleModal(battleCfg) {
-  currentBattle = battleCfg;
-  setText("battle-enemy-name", battleCfg.enemyName);
-  setText("battle-enemy-cp", `БМ: ${battleCfg.enemyCp.toLocaleString()}`);
-  if ($("battle-log")) $("battle-log").innerHTML = battleCfg.intro;
-  updateBattleBars();
-  if ($("battle-modal")) $("battle-modal").style.display = "flex";
-}
-
-function updateBattleBars() {
-  if (!currentBattle) return;
-  setText("battle-enemy-hp-text", `${Math.max(0, currentBattle.enemyHp)}/${currentBattle.enemyMaxHp}`);
-  if ($("battle-enemy-hp-bar")) $("battle-enemy-hp-bar").style.width = `${Math.max(0, (currentBattle.enemyHp / currentBattle.enemyMaxHp) * 100)}%`;
-  setText("battle-player-hp-text", `${Math.max(0, player.hp)}/${player.maxHp}`);
-  if ($("battle-player-hp-bar")) $("battle-player-hp-bar").style.width = `${Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100))}%`;
-  setText("battle-player-mana-text", `${player.mana}/${player.maxMana}`);
-  if ($("battle-player-mana-bar")) $("battle-player-mana-bar").style.width = `${Math.max(0, Math.min(100, (player.mana / player.maxMana) * 100))}%`;
-}
-
-function startGuildBattle(id) {
-  if (player.ap < 2) return showActionModal("Усталость", "Нужно ⚡ 2 силы!", "💤");
-  const q = player.guildQuestsThisYear.find(x => x.id === id); if (!q) return;
-  player.ap -= 2;
-  openBattleModal({ quest: q, enemyName: `${q.enemy} (Ранг ${q.rank})`, enemyHp: q.hp, enemyMaxHp: q.hp, enemyCp: q.cp, intro: `Схватка против <b>${q.enemy}</b> началась!` });
-  playSound("sword");
-}
-
-function challengeSevenPower(rank) {
-  const pow = worldState.sevenPowers.find(p => p.rank === rank); if (!pow) return;
-  openBattleModal({ isSevenPower: true, powerObj: pow, enemyName: `${pow.title} ${pow.name}`, enemyHp: pow.hp, enemyMaxHp: pow.maxHp, enemyCp: pow.cp, intro: `⚡ Вызов за ранг #${pow.rank} Семи Сил против <b>${pow.name}</b>!` });
-  playSound("calamity");
-}
-
-function startFactionEndgameRaid() {
-  const cfg = FACTION_ENDGAMES[player.dynastyFaction]; if (!cfg) return;
-  openBattleModal({ isEndgame: true, endgameFaction: player.dynastyFaction, enemyName: cfg.boss.name, enemyHp: cfg.boss.hp, enemyMaxHp: cfg.boss.maxHp, enemyCp: cfg.boss.cp, intro: `🌌 <b>ФИНАЛЬНАЯ БИТВА ЭПОХИ!</b> Перед вами ${cfg.boss.name}!` });
-  playSound("calamity");
-}
-
-function combatAction(type) {
-  if (!currentBattle) return;
-  const logBox = $("battle-log"), squadCp = currentBattle.isDuel ? calcCombatPower(player) : calcSquadCombatPower(player);
-  const hasForesight = player.demonEyes.left?.id === "foresight" || player.demonEyes.right?.id === "foresight";
-  const hasAppraisal = player.demonEyes.left?.id === "appraisal" || player.demonEyes.right?.id === "appraisal";
-  const silentCast = player.trait.id === "silent_cast";
-
-  if (type === "flee") {
-    if (currentBattle.isSevenPower || currentBattle.isEndgame) {
-      if (logBox) logBox.innerHTML += `<div style="color:var(--hp);">Из этой судьбоносной битвы не сбежать!</div>`;
-      return;
-    }
-    if ($("battle-modal")) $("battle-modal").style.display = "none";
-    currentBattle = null; return;
-  }
-
-  let dmgReduction = 1.0, myDmg = 0;
-  if (type === "potion") {
-    if (player.potionsCount <= 0) { if (logBox) logBox.innerHTML += `<div style="color:var(--hp);">Зелья закончились!</div>`; return; }
-    player.potionsCount--; player.hp = Math.min(player.maxHp, player.hp + 60);
-    if (logBox) logBox.innerHTML += `<div style="color:var(--green);">🧪 Вы выпили зелье (+60 HP)!</div>`;
-    playSound("coin");
-  } else if (type === "parry") {
-    dmgReduction = Math.max(0.2, 0.55 - (player.waterGodExp / 1500));
-    myDmg = Math.floor((player.waterGodExp + 20) * (squadCp / (currentBattle.enemyCp + 100)) * 1.4) + 12;
-    if (logBox) logBox.innerHTML += `<div>💧 Парирование и контратака: <b>-${myDmg} HP</b>!</div>`;
-    playSound("sword");
-  } else if (type === "sword") {
-    const pwr = Math.max(15, player.swordGodExp + player.waterGodExp + player.northGodExp);
-    myDmg = Math.floor(pwr * (squadCp / (currentBattle.enemyCp + 100)) * 2.2) + Math.floor(Math.random() * 25) + 15;
-    if (hasAppraisal) myDmg = Math.floor(myDmg * 1.3);
-    if (logBox) logBox.innerHTML += `<div>⚔️ Выпад клинком: <b>-${myDmg} HP</b>!</div>`;
-    playSound("sword");
-  } else if (type === "magic") {
-    const manaCost = silentCast ? 5 : 10;
-    if (player.mana < manaCost) {
-      myDmg = 8; if (logBox) logBox.innerHTML += `<div style="color:var(--muted);">Мана на нуле (-8 HP)!</div>`;
-    } else {
-      player.mana -= manaCost;
-      myDmg = Math.floor((player.magicExp + 15) * (squadCp / (currentBattle.enemyCp + 100)) * 2.7) + Math.floor(Math.random() * 35) + 25;
-      if (silentCast) myDmg = Math.floor(myDmg * 1.3);
-      if (hasAppraisal) myDmg = Math.floor(myDmg * 1.3);
-      if (logBox) logBox.innerHTML += `<div>🔮 Удар стихией: <b>-${myDmg} HP</b>!</div>`;
-      playSound("magic");
-    }
-  }
-
-  if (!currentBattle.isDuel && player.squad.length > 0 && type !== "potion") {
-    const ally = player.squad[Math.floor(Math.random() * player.squad.length)];
-    const allyDmg = Math.max(10, Math.floor((ally.cp / (currentBattle.enemyCp + 200)) * 45));
-    myDmg += allyDmg;
-    if (logBox) logBox.innerHTML += `<div style="color:#a78bfa;">🛡️ ${ally.name} помогает атакой: <b>-${allyDmg} HP</b>!</div>`;
-  }
-
-  currentBattle.enemyHp -= myDmg;
-
-  if (currentBattle.enemyHp <= 0) {
-    if (logBox) logBox.innerHTML += `<div style="color:var(--gold); font-weight:700;">🏆 ПОБЕДА!</div>`;
-    playSound("win");
-    if (currentBattle.isEndgame) {
-      const msg = currentBattle.endgameFaction === "hitogami"
-        ? `👁️👑 <b>ОРСТЕД ПОВЕРЖЕН!</b> Воля Хитогами восторжествовала! Ваш род вознесён как Высшие Апостолы Новой Эры!`
-        : `🌌👑 <b>ХИТОГАМИ ПОВЕРЖЕН!</b> Вы и Орстед разорвали цепи Пустоты и спасли Шестилий Мир!`;
-      player.coins += 100000; log(msg);
-      worldState.chronicles.push({ year: worldState.currentWorldYear, text: msg });
-      showActionModal("ФИНАЛ САГИ", msg, "👑");
-    } else if (currentBattle.isSevenPower) {
-      const pow = currentBattle.powerObj;
-      if (player.currentPowersSeat && player.currentPowersSeat !== pow.rank) vacatePowerSeatToWorld(player, "перешёл на более высокий трон");
-      pow.name = player.name; pow.holderType = "player"; pow.isDead = false; pow.cp = calcCombatPower(player);
-      player.currentPowersSeat = pow.rank; player.coins += 25000;
-      const msg = `👑 <b>ТРИУМФ!</b> Вы заняли ранг #${pow.rank} (${pow.title}) на Монументе Семи Сил!`;
-      worldState.chronicles.push({ year: worldState.currentWorldYear, text: `🏆 ${player.name} взошёл на трон #${pow.rank} Семи Сил!` });
-      log(msg);
-    } else if (currentBattle.quest) {
-      player.coins += currentBattle.quest.reward; player.guildExp += currentBattle.quest.gp;
-      player.squadFame += currentBattle.quest.gp; player.swordGodExp += 10; player.magicExp += 10;
-      log(`Заказ выполнен (+${currentBattle.quest.reward}🪙, +${currentBattle.quest.gp} GP).`);
-      player.guildQuestsThisYear = player.guildQuestsThisYear.filter(q => q.id !== currentBattle.quest.id);
-      checkGuildRankUp();
-    }
-    setTimeout(() => { if ($("battle-modal")) $("battle-modal").style.display = "none"; currentBattle = null; updateUI(); renderGuildTab(); }, 950);
-    updateBattleBars(); return;
-  }
-
-  if (hasForesight && Math.random() < 0.35) {
-    if (logBox) logBox.innerHTML += `<div style="color:var(--accent-light);">👁️ Вы уклонились от ответного удара!</div>`;
-  } else {
-    const eDmg = Math.max(4, Math.floor((currentBattle.enemyCp / (squadCp + 60) * 18 + Math.random() * 14 + 8) * dmgReduction));
-    player.hp -= eDmg;
-    if (logBox) logBox.innerHTML += `<div style="color:var(--hp);">Враг бьёт: <b>-${eDmg} HP</b>!</div>`;
-  }
-  if (logBox) logBox.scrollTop = logBox.scrollHeight;
-  updateBattleBars(); updateUI();
-
-  if (player.hp <= 0) {
-    const ctx = currentBattle;
-    if ($("battle-modal")) $("battle-modal").style.display = "none";
-    currentBattle = null;
-    const reason = ctx.isEndgame ? `Пал в финальной битве эпохи против ${ctx.enemyName}` : ctx.isSevenPower ? `Пал в дуэли за ранг #${ctx.powerObj.rank} Семи Сил` : `Погиб в схватке с ${ctx.enemyName}`;
-    handleDeath(reason);
-  }
-}
-
-function checkGuildRankUp() {
-  const next = ADVENTURER_RANKS[ADVENTURER_RANKS.indexOf(player.guildRank) + 1];
-  if (next && player.guildExp >= ADVENTURER_REQ[next]) {
-    player.guildRank = next;
-    const msg = `🌟 Ваш ранг Гильдии повышен до <b>${next}</b>!`;
-    log(msg); playSound("win"); showActionModal("Ранг Гильдии", msg, "🌟");
-  }
-}
-
-function renderSquad() {
-  setText("squad-count", player.squad.length + 1);
-  setText("squad-cp", calcSquadCombatPower(player).toLocaleString());
-  setText("squad-fame", player.squadFame);
-  const list = $("squad-members-list"); if (!list) return;
-  list.innerHTML = player.squad.length ? player.squad.map((m, i) => `
-    <div style="display:flex; justify-content:space-between; align-items:center; background:#12141c; padding:6px 10px; border-radius:8px; margin-bottom:4px; font-size:12px;">
-      <div><b>${m.name}</b> <span style="font-size:10px; color:var(--muted);">(${m.role || m.race})</span><div style="font-size:10px; color:#c7d2fe;">БМ: ${m.cp.toLocaleString()}</div></div>
-      <button style="padding:4px 8px; font-size:10px; background:#ef4444;" onclick="removeFromSquad(${i})">Убрать</button>
-    </div>`).join("") : `<div style="font-size:11px; color:var(--muted);">Пригласите спутников во вкладке «Мир & Род»!</div>`;
-}
-
-function addToSquad(id) {
-  if (player.squad.length >= 5) return showActionModal("Отряд", "Максимум 6 бойцов!", "🛡️");
-  const npc = player.relations.find(r => r.id === id); if (!npc || npc.relation < 60) return showActionModal("Недоверие", "Нужно 60%+ отношений!", "❌");
-  player.squad.push(npc); log(`🛡️ ${npc.name} вступил(а) в отряд!`); playSound("win"); updateUI(); renderRelations(); renderSquad();
-}
-function removeFromSquad(i) { log(`${player.squad[i].name} покинул отряд.`); player.squad.splice(i, 1); updateUI(); renderSquad(); }
-
-function checkSquadBetrayal() {
-  for (let i = 0; i < player.squad.length; i++) {
-    const m = player.squad[i];
-    if (m.isFamily || m.status === "Супруг/Супруга" || m.relation >= 85) continue;
-    if (m.relation < 45 || Math.random() < 0.04) {
-      player.hp = Math.max(10, player.hp - 35); player.coins = Math.max(0, player.coins - 50);
-      player.squad.splice(i, 1); m.relation = 0; m.status = "Заклятый враг";
-      log(`🗡️ <b>ПРЕДАТЕЛЬСТВО!</b> ${m.name} ударил в спину и украл золото!`);
-      playSound("death"); showActionModal("Предательство!", `${m.name} предал отряд!`, "🗡️"); updateUI(); return true;
-    }
-  }
-  return false;
-}
-
-// =========================================================================
-// МИР, ПУТЕШЕСТВИЯ, ШКОЛЫ, ПОЛИТИКА, ХАОС БРЕЙКЕР, ГРЕЙРАТ, СКРИЖАЛИ, ЯЗЫКИ
-// =========================================================================
-function renderTravelTab() {
-  const cont = $("world-travel-list"); if (!cont) return;
-  cont.innerHTML = Object.entries(REGIONS).map(([k, r]) => {
-    const here = player.currentRegionKey === k, ok = player.age >= 8 && !here;
-    return `<div class="travel-card"><div><b>${r.name}</b> ${here ? '<span style="color:var(--green); font-size:11px;">(Вы здесь)</span>' : ""}
-      <div style="font-size:11px; color:var(--muted);">${r.desc}</div><div style="font-size:10px; color:var(--gold);">${r.travelCost}🪙 • 1 год</div></div>
-      <button ${ok ? "" : "disabled"} onclick="travelToRegion('${k}')">${here ? "Здесь" : "Ехать"}</button></div>`;
-  }).join("");
-}
-
-function travelToRegion(destKey) {
-  const dest = REGIONS[destKey];
-  if (player.age < 8 || !dest || player.coins < dest.travelCost) return showActionModal("Путь", `Нужно ${dest?.travelCost || 0}🪙 и возраст 8+!`, "🚢");
-  player.coins -= dest.travelCost; player.currentRegionKey = destKey;
-  log(`🚢 Вы прибыли в <b>${dest.name}</b>.`); playSound("calamity");
-  ageUp(); renderTravelTab();
-}
-
-function renderSchools() {
-  const cont = $("schools-list"); if (!cont) return;
-  cont.innerHTML = SCHOOLS.map(s => {
-    const enr = player.enrolledSchool === s.id, grad = player.graduatedSchools.includes(s.id), ok = player.currentRegionKey === s.regionKey && player.age >= s.minAge && !grad && !player.enrolledSchool;
-    return `<div class="school-card"><div class="header"><b>${s.name}</b><span style="color:var(--gold);">${s.cost}🪙</span></div>
-      <div style="font-size:11px; color:var(--muted); margin:4px 0;">${s.desc}</div>
-      <button ${ok ? "" : "disabled"} style="width:100%; background:${grad ? "#059669" : enr ? "#10b981" : "#312e81"};" onclick="enrollSchool('${s.id}')">
-      ${grad ? "✓ Диплом получен" : enr ? `Курс ${player.schoolProgress}/4` : player.currentRegionKey === s.regionKey ? "Поступить" : `Нужен регион: ${s.region}`}</button></div>`;
-  }).join("");
-}
-
-function enrollSchool(id) {
-  const s = SCHOOLS.find(x => x.id === id);
-  if (!s || player.coins < s.cost) return showActionModal("Оплата", "Недостаточно золота!", "🪙");
-  player.coins -= s.cost; player.enrolledSchool = id; player.schoolProgress = 1;
-  log(`🎓 Зачислен в <b>${s.name}</b>!`); playSound("win"); updateUI(); renderSchools();
-}
-
-function renderPolitics() {
-  const cont = $("politics-container"); if (!cont) return;
-  const titles = ASURA_POLITICS.nobilityTitles, idx = titles.findIndex(t => t.id === player.nobilityTitle), next = titles[idx + 1];
-  cont.innerHTML = `<div class="card" style="background:#191428; border-color:#9333ea;">
-    <b style="color:#e9d5ff;">🏛️ Статус: ${titles[idx]?.name}</b>
-    <div style="font-size:11px; color:var(--muted);">Влияние: <b>${player.asuraInfluence}</b></div>
-    ${next ? `<button style="margin-top:8px; width:100%; background:#7e22ce; font-size:11px;" onclick="buyNobilityTitle('${next.id}', ${next.influence * 10}, ${next.influence})">👑 Купить патент: ${next.name} (${next.influence * 10}🪙, ${next.influence} вл.)</button>` : `<div style="color:var(--gold); font-size:11px;">👑 Высший титул Герцога!</div>`}
-  </div><div class="section-title">Фракции Трона Асуры</div>` + ASURA_POLITICS.factions.map(f => {
-    const mine = player.asuraFaction === f.id;
-    return `<div class="card"><b>${f.icon} ${f.name}</b> ${mine ? '<span class="badge-legendary">Ваш выбор ✓</span>' : ""}
-      <div style="font-size:11px; color:var(--muted); margin:4px 0;">${f.desc}</div>
-      ${mine ? `<button style="width:100%; background:#059669; font-size:11px;" onclick="supportFaction(50)">💰 Спонсировать (50🪙, +15 вл.)</button>` : `<button style="width:100%; background:#4338ca; font-size:11px;" onclick="joinAsuraFaction('${f.id}')">Присягнуть</button>`}</div>`;
-  }).join("");
-}
-function joinAsuraFaction(id) { player.asuraFaction = id; log(`👑 Вы поддержали фракцию Асуры.`); playSound("win"); updateUI(); renderPolitics(); }
-function supportFaction(cost) { if (player.coins < cost) return; player.coins -= cost; player.asuraInfluence += 15; log(`💰 Влияние +15.`); playSound("coin"); updateUI(); renderPolitics(); }
-function buyNobilityTitle(id, cost, reqInf) {
-  if (player.coins < cost || player.asuraInfluence < reqInf) return showActionModal("Титул", `Нужно ${cost}🪙 и ${reqInf} влияния!`, "👑");
-  player.coins -= cost; player.nobilityTitle = id; log(`👑 Дарован титул!`); playSound("win"); updateUI(); renderPolitics();
-}
-
-function renderDynastyTree() {
-  const cont = $("dynasty-tree-container"); if (!cont) return;
-  let html = `<div class="tree-node current"><div class="tree-gen">👑 Поколение ${player.generation} (Сейчас • ${worldState.currentWorldYear} г.)</div>
-    <b>${player.name}</b> (${player.race}) • БМ ${calcCombatPower(player).toLocaleString()}</div>`;
-  if (worldState.chronicles.length) {
-    html += `<div class="section-title">Летопись Мира</div>` + worldState.chronicles.slice(-8).reverse().map(c => `<div class="tree-node" style="font-size:11px;"><b style="color:var(--gold);">[${c.year} г.]</b> ${c.text}</div>`).join("");
-  }
-  html += `<div class="section-title">Зал Славы Предков (${worldState.dynastyHistory.length})</div>`;
-  html += worldState.dynastyHistory.length ? worldState.dynastyHistory.slice().reverse().map(a => `
-    <div class="tree-node"><div class="tree-gen">📜 Поколение ${a.gen} ${a.powersSeat ? `• #${a.powersSeat} Семи Сил` : ""}</div>
-    <b>${a.name}</b> (${a.race}) • Пик БМ: ${a.peakCp.toLocaleString()} • ${a.maxAge} л.<div style="font-size:10px; color:var(--muted);">${a.deathReason}</div></div>`).join("") : `<div style="color:var(--muted); font-size:11px;">Летопись предков пока пуста.</div>`;
-  cont.innerHTML = html;
-}
-
-function renderChaosBreaker() {
-  const cont = $("perugius-container"); if (!cont) return;
-  const myCp = calcCombatPower(player);
-  cont.innerHTML = PERUGIUS_TRIALS.map(t => {
-    const done = player.perugiusTrials.includes(t.rank);
-    return `<div class="card"><b>#${t.rank} ${t.name}</b><div style="font-size:11px; color:var(--muted); margin:4px 0;">${t.rewardText} (${t.reqCp.toLocaleString()} БМ)</div>
-      <button ${done || myCp < t.reqCp ? "disabled" : ""} style="width:100%; background:${done ? "#059669" : "#eab308"}; color:${done ? "#fff" : "#000"} !important;" onclick="attemptPerugiusTrial(${t.rank})">${done ? "✓ Пройдено" : myCp < t.reqCp ? "Недостаточно БМ" : "Пройти испытание"}</button></div>`;
-  }).join("");
-}
-function attemptPerugiusTrial(rank) {
-  player.perugiusTrials.push(rank);
-  if (rank === 1) player.intellect += 150;
-  if (rank === 2) player.maxHp += 500;
-  if (rank === 3) { player.coins += 5000; player.trait = TRAITS.find(t => t.id === "laplace_factor") || player.trait; }
-  log(`🐉 Пройдено испытание #${rank} Перугиуса!`); playSound("win"); updateUI(); renderChaosBreaker();
-}
-
-function renderGreyratBranches() {
-  const cont = $("greyrat-branches-container"); if (!cont) return;
-  cont.innerHTML = GREYRAT_BRANCHES.map(b => {
-    const allied = player.greyratAllies.includes(b.id);
-    return `<div class="card"><b>${b.name}</b> <span class="badge-mythic">${allied ? "Союз ✓" : b.region}</span>
-      <div style="font-size:11px; color:var(--muted); margin:4px 0;">${b.leader} • ${b.desc}</div>
-      <button ${allied ? "disabled" : ""} style="width:100%; background:${allied ? "#059669" : "#b91c1c"};" onclick="negotiateGreyratBranch('${b.id}')">${allied ? "Пакт заключён" : "Заключить союз (⚡ 1 сила)"}</button></div>`;
-  }).join("");
-}
-function negotiateGreyratBranch(id) {
-  if (player.ap < 1) return showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤");
-  player.ap -= 1;
-  if (player.asuraInfluence >= 30 || player.swordGodExp >= 80 || calcCombatPower(player) > 10000) {
-    player.greyratAllies.push(id); player.asuraInfluence += 25; log(`🩸 Заключён союз с ветвью Грейрат (+25 влияния)!`); playSound("win");
-  } else showActionModal("Отказ", "Ваш авторитет ещё мал (нужно 30+ влияния или 10,000+ БМ).", "📜");
-  updateUI(); renderGreyratBranches();
-}
-
-function renderTablets() {
-  const cont = $("tablets-container"); if (!cont) return;
-  cont.innerHTML = `<div class="card" style="border-color:#38bdf8;"><b style="color:#38bdf8;">📜 Расшифровано: ${player.tabletsDeciphered.length}/5</b></div>` +
-    FIRST_WAR_TABLETS.map(t => {
-      const done = player.tabletsDeciphered.includes(t.id), ok = !done && player.languages.includes(t.reqLang) && player.currentRegionKey === t.regionKey;
-      return `<div class="tablet-card"><div><b>${t.name}</b> ${done ? '<span style="color:var(--green);">✓</span>' : ""}
-        <div style="font-size:11px; color:var(--muted);">${t.desc}</div><div style="font-size:10px; color:var(--accent-light);">${LANGUAGES[t.reqLang].name} • ${REGIONS[t.regionKey].name}</div></div>
-        <button ${ok ? "" : "disabled"} style="background:${done ? "#059669" : "#0284c7"};" onclick="decipherTablet('${t.id}')">${done ? "Готово" : ok ? "Читать" : "Условия"}</button></div>`;
-    }).join("");
-}
-function decipherTablet(id) {
-  player.tabletsDeciphered.push(id); player.intellect += 20; player.maxMana += 30;
-  let msg = "Скрижаль расшифрована (+20 Знаний, +30 маны)!";
-  if (player.tabletsDeciphered.length === 5) { player.maxMana += 200; player.magicExp += 200; msg += " 🌟 Все 5 скрижалей собраны (+200 к Магии)!"; }
-  log(msg); playSound("win"); showActionModal("Скрижаль", msg, "📜"); updateUI(); renderTablets();
-}
-
-function renderLanguages() {
-  const cont = $("languages-container"); if (!cont) return;
-  cont.innerHTML = Object.entries(LANGUAGES).map(([k, l]) => {
-    const known = player.languages.includes(k);
-    return `<div class="lang-card"><div><b>${l.name}</b> ${known ? '<span style="color:var(--green);">✓</span>' : ""}<div style="font-size:11px; color:var(--muted);">${l.desc}</div></div>
-      <button ${known ? "disabled" : ""} style="background:${known ? "#059669" : "#312e81"};" onclick="learnLanguage('${k}')">${known ? "Изучено" : "Учить (60🪙, ⚡1)"}</button></div>`;
-  }).join("");
-}
-function learnLanguage(k) {
-  if (player.ap < 1 || player.coins < 60) return showActionModal("Язык", "Нужно 60🪙 и ⚡ 1 сила!", "🗣️");
-  player.ap -= 1; player.coins -= 60; player.languages.push(k); player.intellect += 8;
-  log(`🗣️ Изучен язык: <b>${LANGUAGES[k].name}</b>!`); playSound("win"); updateUI(); renderLanguages();
-}
-
-// =========================================================================
-// ОТНОШЕНИЯ, КАНОНИЧЕСКИЕ NPC И ЗНАКОМСТВА
-// =========================================================================
-function toggleNpcActions(id) { currentOpenedNpcId = currentOpenedNpcId === id ? null : id; renderRelations(); }
-
-function renderRelations() {
-  const cont = $("relations-list"); if (!cont) return;
-  if (!player.relations.length) { cont.innerHTML = `<div style="color:var(--muted); text-align:center;">Знакомых пока нет.</div>`; return; }
-  cont.innerHTML = player.relations.map(npc => {
-    const cls = npc.isDead ? "status-dead" : npc.relation < 30 ? "status-enemy" : npc.status === "Супруг/Супруга" ? "status-married" : npc.status === "Пара" ? "status-love" : "status-friend";
-    const open = currentOpenedNpcId === npc.id && !npc.isDead;
-    const inSquad = player.squad.some(m => m.id === npc.id);
-    let actHtml = "";
-    if (open) {
-      if (npc.isLost) actHtml = `<button class="npc-action-full" style="background:#b45309;" onclick="searchLostFamily('${npc.id}')">🔍 Искать пропавшего (⚡ 1 сила)</button>`;
-      else if (player.age < 4) actHtml = `<button onclick="npcInteract('${npc.id}','play')">👶 Поиграть</button><button onclick="npcInteract('${npc.id}','cuddle')">🍼 На ручки</button>`;
-      else if (player.age < 10) actHtml = `<button onclick="npcInteract('${npc.id}','story')">📖 Сказка</button><button onclick="npcInteract('${npc.id}','gift')">🎁 Подарок (15🪙)</button><button onclick="npcInteract('${npc.id}','spar')">🪵 Урок меча</button><button onclick="npcInteract('${npc.id}','pocket')">🪙 Попросить монет</button>`;
-      else {
-        actHtml = `<button onclick="npcInteract('${npc.id}','talk')">💬 Беседа</button><button onclick="npcInteract('${npc.id}','gift')">🎁 Подарок (15🪙)</button>
-          <button onclick="npcInteract('${npc.id}','drink')">🍻 Таверна (12🪙)</button><button onclick="npcInteract('${npc.id}','spar')">⚔️ Спарринг</button>
-          <button onclick="npcInteract('${npc.id}','loan')">🪙 Занять</button><button class="action-danger" onclick="npcInteract('${npc.id}','insult')">🤬 Оскорбить</button>`;
-        if (player.age >= 16 && !inSquad && !npc.isChild) actHtml += `<button class="npc-action-full" style="background:#312e81;" onclick="addToSquad('${npc.id}')">🛡️ В боевой отряд</button>`;
-        if (player.age >= 14 && !npc.isFamily && !npc.isChild && npc.status !== "Пара" && npc.status !== "Супруг/Супруга") actHtml += `<button class="action-love npc-action-full" onclick="npcInteract('${npc.id}','confess')">❤️ Признаться в чувствах</button>`;
-        if (player.age >= 16 && npc.status === "Пара" && !player.spouse) actHtml += `<button class="action-married npc-action-full" onclick="npcInteract('${npc.id}','marry')">💍 Пожениться</button>`;
-        if (npc.status === "Супруг/Супруга") actHtml += `<button class="action-married npc-action-full" ${player.pregnancy ? "disabled" : ""} onclick="npcInteract('${npc.id}','child')">${player.pregnancy ? "⏳ Ожидание малыша" : "👶 Зачать ребенка"}</button>`;
+  },
+  { id: "s1_magic_armor", era: "first", age: 34, name: "🤖 19. Чертежи Магической Брони", desc: "Соединить гномью инженерию и мана-кристаллы.",
+    action: (p) => { p.intellect += 25; p.maxMana += 55; p.maxHp += 50; return "Чертежи боевой брони вписаны в архивы Шарии (+25 Знаний, +55 маны, +50 HP)!"; } },
+  { id: "s1_elder_legacy", era: "first", age: 50, name: "📜 20. Завет Основателя Династии", desc: "Заложить фундамент влияния рода на грядущие столетия.",
+    action: (p) => { p.asuraInfluence += 45; p.squadFame += 70; p.intellect += 20; return "Летописи рода запечатаны: потомки не забудут ваш путь (+45 влияния, +70 Славы)!"; } },
+
+  // --- БУДУЩИЕ ЖИЗНИ И ВЕКА ВПЕРЁД (430 - 800+ ГГ., БЕЗ ВОЙНЫ С ЛАПЛАСОМ) ---
+  { id: "f_child_archives", era: "future", minYear: 430, age: 4, name: "📚 Наследие: Дневники первых героев", desc: "В родовом сундуке хранятся записи времён Катаклизма Фитоа.",
+    action: (p) => { p.intellect += 10; p.maxMana += 18; return "Вы изучили опыт прошлого поколения (+10 Знаний, +18 маны)!"; } },
+  { id: "f_hitogami_whisper", era: "future", minYear: 430, age: 12, name: "👁️ Сон Хитогами: Зов Нового Поколения", desc: "Человекобог вновь пробирается в сны смертных: «Твои предки оставили след...»",
+    choices: [
+      { text: "Присягнуть Снам Хитогами (+220🪙, +40 маны)", action: (p) => {
+        p.dynastyFaction = "hitogami"; p.hitogamiTrust += 35; p.reputation -= 15; p.coins += 220; p.maxMana += 40;
+        return "Вы вступили в круг Апостолов Хитогами (+220🪙, +40 маны)!";
+      }},
+      { text: "Встать под знамя Орстеда (+30 Мечу и Магии)", action: (p) => {
+        p.dynastyFaction = "orsted"; p.factionProgress += 25; p.reputation += 20; p.swordGodExp += 30; p.magicExp += 30;
+        return "Вы отвергли Сны Пустоты и принесли клятву Орстеду (+30 Мечу и Магии)!";
+      }}
+    ]
+  },
+  { id: "f_fitoa_rebuild", era: "future", minYear: 430, maxYear: 520, age: 18, name: "🌾 Возрождение Провинции Фитоа", desc: "Отстройка разрушенных земель и зачистка бродячих чудовищ.",
+    action: (p) => { p.coins += 160; p.asuraInfluence += 25; p.reputation += 15; return "Выросли новые города (+160🪙, +25 влияния, +15 Света)!"; } },
+  { id: "f_orsted_network", era: "future", minYear: 440, reqFaction: "orsted", age: 24, name: "🐉 Тайная сеть Орстеда в Милисе", desc: "Охота на теневых агентов Белого Пространства.",
+    action: (p) => { p.factionProgress += 30; p.intellect += 20; p.coins += 180; return "Ячейка Апостолов раскрыта (+180🪙, +20 Знаний)!"; } },
+  { id: "f_hitogami_sabotage", era: "future", minYear: 440, reqFaction: "hitogami", age: 24, name: "👁️ Диверсия по Сну Хитогами", desc: "Человекобог указал на уязвимость союзников Орстеда.",
+    action: (p) => { p.hitogamiTrust += 30; p.reputation -= 15; p.coins += 320; p.northGodExp += 35; return "Операция прошла бесшумно (+320🪙, +35 Севера)!"; } },
+  { id: "f_c5_skyships", era: "future", minYear: 500, maxYear: 620, age: 20, name: "⛵ VI век: Магические Баржи", desc: "Учёные Шарии запустили первые воздушные суда на мана-кристаллах.",
+    action: (p) => { p.intellect += 25; p.maxMana += 45; return "Освоена навигация небесных судов (+25 Знаний, +45 маны)!"; } },
+  { id: "f_c5_powers_audit", era: "future", minYear: 500, age: 30, name: "🏆 Передел Монумента Семи Сил", desc: "Имена на каменной плите вызывают трепет. Пора вписать своё!",
+    action: (p) => { p.swordGodExp += 50; p.squadFame += 90; return "Мастера мира следят за вашим ростом (+50 Мечу, +90 Славы)!"; } },
+  { id: "f_c6_mana_crisis", era: "future", minYear: 600, maxYear: 720, age: 22, name: "❄️ VII век: Истощение Жил Севера", desc: "Кристаллы Раноа гаснут — нужно спуститься в глубины за сердцем земли.",
+    action: (p) => { p.maxMana += 80; p.magicExp += 55; return "Вы стабилизировали северные жилы (+80 макс. маны, +55 Магии)!"; } },
+  { id: "f_c6_hitogami_prophet", era: "future", minYear: 600, reqFaction: "hitogami", age: 35, name: "👁️ Пророк Седьмого Столетия", desc: "Сны Хитогами переписывают политическую карту континентов.",
+    action: (p) => { p.asuraInfluence += 65; p.coins += 750; return "Короли и архимаги слушаются ваших предсказаний (+65 влияния, +750🪙)!"; } },
+  { id: "f_c6_orsted_relics", era: "future", minYear: 600, reqFaction: "orsted", age: 35, name: "🐉 Архив Первого Бога Драконов", desc: "Орстед доверил вам часть древних рун защиты мира.",
+    action: (p) => { p.swordGodExp += 60; p.waterGodExp += 60; p.maxHp += 120; return "Древнее искусство Драконов (+60 к стилям, +120 HP)!"; } },
+  { id: "f_c7_eternal_dynasty", era: "future", minYear: 700, age: 28, name: "🏛️ VIII+ век: Бессмертный Род", desc: "Ваша фамилия известна от Асуры до пустошей Бегаритта.",
+    action: (p) => { p.coins += 1200; p.squadFame += 150; p.maxMana += 100; return "Дома мира присылают дары (+1,200🪙, +150 Славы, +100 маны)!"; } },
+  { id: "f_c7_void_echo", era: "future", minYear: 700, age: 42, name: "🌌 Отголосок Белого Пространства", desc: "Спустя столетия после Катаклизма барьер между мирами истончился.",
+    action: (p) => { p.magicExp += 80; p.swordGodExp += 80; p.intellect += 40; return "Вы заглянули за грань мироздания (+80 Магии и Мечу, +40 Знаний)!"; } }
+];
+
+const ACTIVITIES = [
+  { id: "baby_crawl", category: "childhood", name: "👶 Ползать и изучать комнаты", minAge: 0, maxAge: 3, cost: 0, apCost: 1, desc: "Развивает восприятие мира.", action: (p) => { p.intellect += 1; return "Вы изучали комнаты дома (+1 Знаний)."; } },
+  { id: "baby_peekaboo", category: "childhood", name: "🍼 Играть с родителями", minAge: 0, maxAge: 2, cost: 0, apCost: 1, desc: "Укрепляет здоровье и покой.", action: (p) => { p.hp = Math.min(p.maxHp, p.hp + 15); return "Тепло родного дома восстановило силы (+15 HP)."; } },
+  { id: "listen_parents", category: "childhood", name: "🗣️ Слушать сказки и разговоры", minAge: 1, maxAge: 5, cost: 0, apCost: 1, desc: "Азы речи и истории мира.", action: (p) => { p.intellect += 2; return "Сказки о героях расширили кругозор (+2 Знаний)."; } },
+  { id: "toddler_mana", category: "magic", name: "🔮 Концентрация и расширение маны", minAge: 1, maxAge: 100, cost: 0, apCost: 1, desc: "До 10 лет сосуд растёт стремительно; после 10 — каналы твердеют (кроме Фактора Лапласа).", action: (p) => {
+    const isLaplace = p.trait.id === "laplace_factor" || p.trait.id === "god_mode";
+    const agePenalty = (p.age > 10 && !isLaplace) ? 0.25 : 1.0;
+    const mod = (p.trait.growthMod || 1) * (p.raceObj.bonus.manaMod || 1) * agePenalty;
+    const gain = Math.max(1, Math.round(6 * mod));
+    p.maxMana += gain; p.mana = p.maxMana;
+    p.magicExp += Math.round(6 * (p.raceObj.learnMod || 1));
+    return `Сосуд маны расширился на <b>+${gain} макс. маны</b>${agePenalty < 1 ? " (каналы взрослого твердеют)" : ""}!`;
+  }},
+  { id: "wooden_stick_play", category: "childhood", name: "🪵 Тренировка с палкой", minAge: 3, maxAge: 6, cost: 0, apCost: 1, desc: "Первые замахи клинком.", action: (p) => { p.swordGodExp += 6; return "Вы сбивали крапиву палкой (+6 Мечу)."; } },
+  { id: "catch_insects", category: "childhood", name: "🦗 Ловля сверчков", minAge: 3, maxAge: 7, cost: 0, apCost: 1, desc: "Реакция глаз и ловкость.", action: (p) => { p.northGodExp += 6; return "Вы перехватывали жуков (+6 Севера)."; } },
+  { id: "read_scrolls", category: "life", name: "📜 Изучение свитков и летописей", minAge: 4, maxAge: 100, cost: 3, apCost: 1, desc: "Книги дают Знания (удваивается у Любознательных).", action: (p) => {
+    const bonus = p.trait.id === "curious" ? 10 : 6;
+    p.coins -= 3; p.intellect += bonus;
+    return `Вы изучили древние трактаты (+${bonus} Знаний).`;
+  }},
+  { id: "magic_circle_study", category: "magic", name: "✨ Изучение магических кругов", minAge: 7, maxAge: 100, cost: 0, apCost: 1, desc: "Формулы стихий и призыва.", action: (p) => {
+    const gain = Math.round(12 * getTrainingMultiplier(p, p.magicExp));
+    p.magicExp += gain; p.intellect += 3;
+    return `Вы вычерчивали руны призыва (+${gain} Магии, +3 Знаний).`;
+  }},
+  { id: "sword_practice", category: "combat", name: "🗡️ Стойка Бога Меча", minAge: 7, maxAge: 100, cost: 0, apCost: 1, desc: "Молниеносный выпад (ускоряется рангом и полигоном).", action: (p) => {
+    const gain = Math.round(14 * getTrainingMultiplier(p, p.swordGodExp) * (p.castleUpgrades.includes("training_yard") ? 1.25 : 1));
+    p.swordGodExp += gain; return `Клинок рассекает воздух (+${gain} Мечу).`;
+  }},
+  { id: "water_parry", category: "combat", name: "💧 Стойка Бога Воды", minAge: 7, maxAge: 100, cost: 0, apCost: 1, desc: "Идеальное парирование.", action: (p) => {
+    const gain = Math.round(14 * getTrainingMultiplier(p, p.waterGodExp));
+    p.waterGodExp += gain; return `Вы гасили встречные выпады (+${gain} Воды).`;
+  }},
+  { id: "north_tricks", category: "combat", name: "🌪️ Стойка Бога Севера", minAge: 7, maxAge: 100, cost: 0, apCost: 1, desc: "Финты, перекаты и уловки.", action: (p) => {
+    const gain = Math.round(14 * getTrainingMultiplier(p, p.northGodExp));
+    p.northGodExp += gain; return `Вы освоили выпад из переката (+${gain} Севера).`;
+  }},
+  { id: "gather_herbs", category: "life", name: "🌿 Сбор редких трав", minAge: 6, maxAge: 100, cost: 0, apCost: 1, desc: "Подработка для аптекаря.", action: (p) => { const e = Math.floor(Math.random() * 8) + 4; p.coins += e; return `Вы сдали корзину трав (+${e}🪙).`; } },
+  { id: "school_lesson", category: "school", name: "🎓 Посетить академическую лекцию", minAge: 10, maxAge: 100, cost: 0, apCost: 1, desc: "Прогресс в зачисленной Академии.", action: (p) => {
+    if (!p.enrolledSchool) return "Вы не зачислены в Академию! Поступите во вкладке «Мир & Род».";
+    const intGain = p.trait.id === "curious" ? 10 : 6;
+    p.schoolProgress = p.schoolProgress || 1;
+    p.intellect += intGain; p.magicExp += Math.round(16 * (p.raceObj.learnMod || 1));
+    if (Math.random() > 0.52) {
+      p.schoolProgress++;
+      if (p.schoolProgress > 4) {
+        p.graduatedSchools.push(p.enrolledSchool);
+        p.enrolledSchool = null; p.coins += 120;
+        return `🏆 <b>ВЫПУСК!</b> Вы с отличием окончили Академию (+120🪙)!`;
       }
+      return `📜 Экзамен сдан! Текущий курс: ${p.schoolProgress}/4.`;
     }
-    const badges = `${npc.isCanon ? '<span class="badge-canon">Канон ⭐</span> ' : ""}${npc.isChild ? '<span style="color:#fbbf24;">(Наследник)</span> ' : ""}${npc.isLost ? '<span class="badge-mythic">Пропал ⚡</span> ' : ""}${inSquad ? '<span class="badge-rare">Отряд 🛡️</span>' : ""}`;
-    return `<div class="relation-card"><div class="rel-header" onclick="${npc.isDead ? "" : `toggleNpcActions('${npc.id}')`}" style="cursor:${npc.isDead ? "default" : "pointer"};">
-      <div><div class="rel-name">${npc.name} ${badges}</div><div class="rel-role">${npc.role || npc.race} • ${npc.age} л. • БМ ${(npc.cp || 500).toLocaleString()}</div></div>
-      <div style="text-align:right;"><div style="font-size:12px; font-weight:700;"><span class="${cls}">${npc.status}</span> ${npc.isDead ? "" : `(${npc.relation}%)`}</div></div></div>
-      ${!npc.isDead ? `<div class="bar-bg"><div class="bar-fill bar-relation" style="width:${npc.relation}%; background:${npc.relation < 30 ? "var(--hp)" : "var(--green)"};"></div></div>` : ""}
-      ${actHtml ? `<div class="npc-inline-actions">${actHtml}</div>` : ""}</div>`;
-  }).join("");
-}
+    return `Вы конспектировали лекцию магистра (+16 Магии, +${intGain} Знаний).`;
+  }},
+  { id: "street_sparring", category: "youth", name: "🥊 Уличные дуэли", minAge: 11, maxAge: 17, cost: 0, apCost: 1, desc: "Опыт уличных стычек.", action: (p) => { p.swordGodExp += 10; p.northGodExp += 10; return "Поединок на окраине (+10 Мечу и Севера)."; } },
+  { id: "youth_debate", category: "youth", name: "📚 Диспуты о природе маны", minAge: 12, maxAge: 25, cost: 0, apCost: 1, desc: "Споры об устройстве мира.", action: (p) => { p.intellect += 8; return "Вы блестяще отстояли тезисы (+8 Знаний)."; } },
+  { id: "tavern_rest", category: "life", name: "🛌 Отдых в таверне (100% HP)", minAge: 6, maxAge: 100, cost: 6, apCost: 1, desc: "Снять комнату и восстановить HP.", action: (p) => { p.coins -= 6; p.hp = p.maxHp; return "Горячий ужин и сон полностью восстановили здоровье!"; } },
+  { id: "high_society_ball", category: "life", name: "🎭 Дворянский бал", minAge: 16, maxAge: 100, cost: 18, apCost: 1, desc: "Связи среди знати Асуры.", action: (p) => { p.coins -= 18; p.asuraInfluence += 12; return "Полезные знакомства (+12 влияния)."; } },
+  { id: "write_memoirs", category: "elder", name: "✍️ Родовые хроники", minAge: 45, maxAge: 100, cost: 0, apCost: 1, desc: "Мудрость для потомков.", action: (p) => { p.intellect += 12; return "Мемуары занесены в архив (+12 Знаний)."; } },
+  { id: "mentor_young", category: "elder", name: "🥋 Наставлять учеников", minAge: 40, maxAge: 100, cost: 0, apCost: 1, desc: "Передача секретов клинка.", action: (p) => { p.squadFame += 20; p.coins += 25; return "Ученики внимали урокам (+20 Славы, +25🪙)."; } }
+];
 
-function npcInteract(id, act) {
-  const npc = player.relations.find(r => r.id === id); if (!npc) return;
-  const beastBoost = (npc.race === "Зверочеловек" && player.languages.includes("beast")) ? 1.25 : 1;
-  const gainRel = (v) => { npc.relation = Math.min(100, npc.relation + Math.round(v * beastBoost)); };
-  let msg = "";
-  if (act === "play" || act === "cuddle") { gainRel(11); if (act === "cuddle") player.hp = Math.min(player.maxHp, player.hp + 10); msg = `Тёплое общение с ${npc.name}!`; playSound("win"); }
-  else if (act === "story") { gainRel(8); player.intellect += 2; msg = `${npc.name} рассказал(а) сказку (+2 Знаний)!`; playSound("win"); }
-  else if (act === "pocket") { if (npc.relation >= 70) { const g = Math.floor(Math.random() * 5) + 2; player.coins += g; msg = `${npc.name} дал(а) на сладости (+${g}🪙)!`; playSound("coin"); } else msg = `${npc.name} отказал(а).`; }
-  else if (act === "talk") { gainRel(8); if (npc.relation >= 60 && npc.status === "Знакомый") npc.status = "Друг"; msg = `Душевная беседа с ${npc.name}.`; playSound("click"); }
-  else if (act === "gift") { if (player.coins < 15) return showActionModal("Золото", "Нужно 15🪙!", "🪙"); player.coins -= 15; gainRel(20); msg = `Подарок порадовал ${npc.name} (+20%)!`; playSound("coin"); }
-  else if (act === "drink") { if (player.coins < 12) return showActionModal("Золото", "Нужно 12🪙!", "🍻"); player.coins -= 12; gainRel(14); msg = `Отличный вечер в таверне с ${npc.name}!`; playSound("coin"); }
-  else if (act === "spar") { player.swordGodExp += 10; npc.cp += 150; msg = `Спарринг с ${npc.name} (+10 Мечу)!`; playSound("sword"); }
-  else if (act === "loan") { if (npc.relation >= 75) { const g = Math.floor(Math.random() * 40) + 20; player.coins += g; npc.relation -= 5; msg = `${npc.name} одолжил(а) +${g}🪙.`; playSound("coin"); } else msg = `Мало доверия (нужно 75%+).`; }
-  else if (act === "insult") { npc.relation = Math.max(0, npc.relation - 30); if (npc.relation <= 25) npc.status = "Заклятый враг"; msg = `Вы оскорбили ${npc.name}!`; playSound("click"); }
-  else if (act === "confess") { if (npc.relation >= 75) { npc.status = "Пара"; msg = `💖 ${npc.name} ответил(а) взаимностью!`; playSound("win"); } else { npc.relation = Math.max(0, npc.relation - 10); msg = `💔 ${npc.name}: "Останемся друзьями..."`; } }
-  else if (act === "marry") { if (npc.relation >= 88) { npc.status = "Супруг/Супруга"; player.spouse = npc; msg = `💍 Вы и ${npc.name} поженились!`; playSound("win"); } else msg = `Укрепите отношения до 88%+!`; }
-  else if (act === "child") { player.pregnancy = { partnerName: npc.name }; msg = `👶 Вы с ${npc.name} ждёте ребёнка!`; playSound("win"); }
-  log(msg); showActionModal("Отношения", msg, "👥"); updateUI(); renderRelations();
-}
-
-function searchLostFamily(id) {
-  if (player.ap < 1) return showActionModal("Усталость", "Нужно ⚡ 1 сила!", "💤");
-  player.ap -= 1;
-  const npc = player.relations.find(r => r.id === id);
-  if (npc && Math.random() < 0.6) { npc.isLost = false; log(`🎉 Вы нашли <b>${npc.name}</b>!`); playSound("win"); showActionModal("Воссоединение!", `Вы нашли <b>${npc.name}</b>!`, "🎉"); }
-  else showActionModal("Поиски", "Пока следов нет, ищите дальше!", "🔍");
-  updateUI(); renderRelations();
-}
-
-function trySpawnCanonNpc(isSearch = false) {
-  const pool = CANON_NPCS.filter(c => c.region === player.currentRegionKey && player.age >= c.minAge && player.age <= c.maxAge && !player.relations.some(r => r.id === c.id));
-  if (!pool.length) return null;
-  const cand = pool[Math.floor(Math.random() * pool.length)];
-  if (Math.random() < (isSearch ? cand.baseChance * 1.6 : cand.baseChance)) {
-    const npc = { ...cand, age: player.age + (cand.id === "roxy" || cand.id === "ghislaine" || cand.id === "ruijerd" ? 18 : 0), relation: 55, status: "Знакомый", isCanon: true, isLost: false, isDead: false };
-    player.relations.push(npc);
-    return npc;
+const RANDOM_EVENTS = [
+  { id: "hitogami_dream_tempt", minAge: 12, chance: 0.22, icon: "👁️", title: "Сон Белого Пространства (Хитогами)",
+    desc: "Среди ночи туман расступается, и безликий Бог Людей улыбается вам: «Послушай мой совет — забери сундук в старой часовне до рассвета...»",
+    choices: [
+      { text: "Последовать совету Хитогами (+120🪙, +18 Магии, Доверие +20)", action: (p) => {
+        p.coins += 120; p.magicExp += 18; p.hitogamiTrust += 20; p.reputation -= 10;
+        if (p.dynastyFaction === "neutral" && p.hitogamiTrust >= 35) {
+          p.dynastyFaction = "hitogami";
+          return "Вы забрали золото! Сны Хитогами подчинили вашу судьбу — вы стали его Апостолом (+120🪙, +18 Магии)!";
+        }
+        return "В часовне действительно ждал забытый сундук (+120🪙, +18 Магии)!";
+      }},
+      { text: "Отвергнуть шёпот Пустоты (+8 Знаний, +10 Света)", action: (p) => {
+        p.hitogamiTrust -= 10; p.intellect += 8; p.reputation += 10;
+        return "Вы проснулись в холодном поту, но сохранили ясность разума (+8 Знаний, +10 Света).";
+      }}
+    ]
+  },
+  { id: "hitogami_dream_price", minAge: 18, chance: 0.25, icon: "🩸", title: "Цена Белого Пространства (Сон Хитогами)",
+    desc: "Хитогами усмехается шире прежнего: «Ты получил мои дары. Теперь уничтожь тайник союзников Орстеда и подставь одного из знакомых ради моей цели!»",
+    choices: [
+      { text: "Исполнить волю Хитогами (+400🪙, +40 ко всем стилям, -30 Тень)", action: (p) => {
+        p.coins += 400; p.swordGodExp += 40; p.magicExp += 40; p.hitogamiTrust += 35; p.reputation -= 30;
+        const victim = p.relations.find(r => !r.isDead && !r.isFamily);
+        if (victim) { victim.relation = Math.max(0, victim.relation - 50); victim.status = "Заклятый враг"; }
+        return `Задание выполнено ценой предательства${victim ? ` (${victim.name} проклял вас)` : ""}! (+400🪙, +40 к стилям)`;
+      }},
+      { text: "Разорвать сделку! (Отказ: бой или удар Апостола!)", action: (p) => {
+        p.dynastyFaction = "orsted"; p.hitogamiTrust = 0; p.hp = Math.max(10, p.hp - 55); p.reputation += 25;
+        return "Разъярённый Хитогами наслал на вас наёмников! Вы чудом отбились (-55 HP) и перешли к Орстеду!";
+      }}
+    ]
+  },
+  { id: "milis_saint_healer", minAge: 14, chance: 0.25, icon: "✨", title: "Архиепископ Исцеления Милиса",
+    desc: "Странствующий мастер Святой Магии способен срастить кости и вырастить утраченную руку!",
+    choices: [
+      { text: "Оплатить ритуал (300🪙 — лечит все травмы и 100% HP)", action: (p) => {
+        if (p.coins < 300) return "У вас нет 300 монет на священные реагенты!";
+        p.coins -= 300; p.injuries = []; p.hp = p.maxHp;
+        return "Ослепительный свет восстановил ваше тело полностью!";
+      }},
+      { text: "Простое благословение (+20 HP)", action: (p) => { p.hp = Math.min(p.maxHp, p.hp + 20); return "Мягкое сияние согрело душу (+20 HP)."; } }
+    ]
+  },
+  { id: "fame_challenger_duel", minAge: 14, chance: 0.20, icon: "⚔️", title: "Вызов от Искателя Славы!",
+    desc: "Странствующий мечник узнал вас по балладам бардов: «Скрести со мной клинок!»",
+    choices: [
+      { text: "Принять бой и сокрушить наглеца!", action: (p) => {
+        const myCp = calcCombatPower(p);
+        if (myCp > myCp * (0.55 + Math.random() * 0.45)) { p.swordGodExp += 25; p.squadFame += 25; return "Наглец повержен (+25 Мечу, +25 Славы)!"; }
+        p.hp = Math.max(10, p.hp - 30); return "Схватка вышла суровой (-30 HP), но победа за вами!";
+      }},
+      { text: "Пройти мимо", action: () => "Вы хладнокровно проигнорировали крикуна." }
+    ]
+  },
+  { id: "noble_matchmaking", minAge: 16, chance: 0.16, icon: "💍", title: "Сватовство Дворянского Дома!",
+    desc: "К дому прибыла карета знатного рода. Лорд предлагает брак с солидным приданым!",
+    choices: [
+      { text: "Принять предложение (+150🪙, +25 влияния)", action: (p) => {
+        if (p.spouse) return "Вы уже в браке! Сваты удалились.";
+        p.coins += 150; p.asuraInfluence += 25;
+        const sName = p.gender === "male" ? "Леди Элеонора де Арс" : "Лорд Годфри де Роа";
+        const sp = { id: "spouse_" + Date.now(), name: sName, gender: p.gender === "male" ? "female" : "male", race: "Человек", age: p.age + 1, role: "Дворянский супруг", cp: 800, relation: 80, status: "Супруг/Супруга", isFamily: false, isDead: false };
+        p.spouse = sp; p.relations.push(sp);
+        return `Вы заключили союз с <b>${sName}</b>! Приданое: +150🪙 и +25 влияния!`;
+      }},
+      { text: "Вежливо отказать", action: () => "Вы ответили, что сердце пока свободно." }
+    ]
+  },
+  { id: "canon_kishirika", isRare: true, minAge: 8, chance: 0.08, icon: "👁️", title: "Императрица Демонов Киширика!",
+    desc: "В пыли сидит голодная коротышка с рогами: «Ху-ха-ха! Накорми Киширику за 35 монет, и я подарю тебе Демонический Глаз!»",
+    choices: [
+      { text: "Отдать 35 монет за Демонический Глаз", action: (p) => {
+        if (p.coins < 35) return "Нет 35 монет! Киширика обиженно сбежала.";
+        p.coins -= 35;
+        const keys = Object.keys(DEMON_EYES);
+        const eye = DEMON_EYES[keys[Math.floor(Math.random() * keys.length)]];
+        p.demonEyes = p.demonEyes || { left: null, right: null };
+        if (!p.demonEyes.left) { p.demonEyes.left = eye; return `👁️ В левую глазницу вживлён <b>${eye.name}</b>!`; }
+        if (!p.demonEyes.right) { p.demonEyes.right = eye; return `👁️ В правую глазницу вживлён <b>${eye.name}</b>!`; }
+        p.swordGodExp += 30; p.magicExp += 30;
+        return "У вас уже оба глаза демона! Киширика поделилась маной (+30 ко всем стилям).";
+      }},
+      { text: "Пройти мимо", action: () => "Вы не стали связываться со странной девчонкой." }
+    ]
+  },
+  { id: "wandering_bard", minAge: 7, chance: 0.18, icon: "🪕", title: "Песнь Странствующего Барда",
+    desc: "В таверне бард поёт баллады о героях прошлых лет.",
+    choices: [
+      { text: "Угостить элем (3🪙) и расспросить о слухах", action: (p) => { if (p.coins < 3) return "Не хватило монет."; p.coins -= 3; p.intellect += 6; return "Бард раскрыл древние легенды (+6 Знаний)."; } },
+      { text: "Просто послушать музыку (+10 HP)", action: (p) => { p.hp = Math.min(p.maxHp, p.hp + 10); return "Мелодия успокоила сердце (+10 HP)."; } }
+    ]
+  },
+  { id: "stolen_wallet", minAge: 10, chance: 0.18, icon: "👝", title: "Вор на базарной площади!",
+    desc: "Карманник срезал кошель у купца и несётся прямо на вас!",
+    choices: [
+      { text: "Поставить подножку (+25🪙, +10 Севера, +8 Света)", action: (p) => {
+        if (p.northGodExp >= 12 || Math.random() > 0.3) { p.coins += 25; p.northGodExp += 10; p.reputation += 8; return "Купец наградил вас за помощь (+25🪙, +10 Севера)!"; }
+        p.hp = Math.max(5, p.hp - 15); return "Вор полоснул ножом и сбежал (-15 HP).";
+      }},
+      { text: "Сбить заклинанием (+12 Магии, +8 Света)", action: (p) => { p.magicExp += 12; p.reputation += 8; return "Вор задержан стражей (+12 Магии)."; } },
+      { text: "Отойти в сторону", action: () => "Вы не стали вмешиваться." }
+    ]
+  },
+  { id: "canon_orsted", isRare: true, minAge: 16, chance: 0.05, icon: "🐉", title: "Встреча: Бог Драконов Орстед!",
+    desc: "В ущелье вы натыкаетесь на мужчину в белом чешуйчатом плаще. Проклятие ужаса сковывает грудь!",
+    choices: [
+      { text: "Упасть на колени и отвести взгляд", action: (p) => { p.hp = Math.max(10, p.hp - 15); return "Орстед окинул вас ледяным взглядом и прошёл мимо (-15 HP)."; } },
+      { text: "Заговорить о Хитогами", action: (p) => {
+        if (p.dynastyFaction === "orsted") { p.factionProgress += 15; return "Орстед коротко кивнул: «Действуй по плану, союзник» (+15 прогресса Орстеда)."; }
+        p.hp = Math.max(5, p.hp - 70); return "Орстед нанёс сокрушительный удар! Вы чудом выжили (-70 HP)!";
+      }}
+    ]
   }
-  return null;
-}
+];
 
-function meetStranger() {
-  const canon = trySpawnCanonNpc(true);
-  if (canon) {
-    const msg = `⭐ <b>КАНОНИЧЕСКАЯ ВСТРЕЧА!</b> Вы познакомились с <b>${canon.name}</b> (${canon.role})!`;
-    log(msg); playSound("win"); showActionModal("Легендарная встреча!", msg, "⭐");
-    renderRelations(); updateUI(); return;
-  }
-  const isM = Math.random() > 0.5, list = SYLLABLES[isM ? "male" : "female"];
-  const classes = ["Крестьянин", "Наемник", "Купец", "Рыцарь", "Магистр", "Аристократ"];
-  const cls = classes[Math.floor(Math.random() * classes.length)], cp = Math.floor(Math.random() * 2500) + 300;
-  const rKeys = Object.keys(RACES);
-  const npc = {
-    id: "npc_" + Date.now(), name: `${list[Math.floor(Math.random() * list.length)]} ${SYLLABLES.surnames[Math.floor(Math.random() * SYLLABLES.surnames.length)]}`,
-    gender: isM ? "male" : "female", race: RACES[rKeys[Math.floor(Math.random() * rKeys.length)]].name,
-    age: Math.max(16, player.age + Math.floor(Math.random() * 8) - 4), role: cls, cp,
-    relation: Math.floor(Math.random() * 25) + 35, status: "Знакомый", isDead: false
-  };
-  player.relations.push(npc);
-  const msg = `Вы встретили <b>${npc.name}</b> (${npc.race}, ${npc.role}, БМ ${cp.toLocaleString()}).`;
-  log(msg); playSound("click"); showActionModal("Знакомство", msg, "👥"); renderRelations(); updateUI();
-}
-
-// =========================================================================
-// ТЕЧЕНИЕ ГОДА (AGE UP)
-// =========================================================================
-function ageUp() {
-  player.age++; worldState.currentWorldYear++;
-  player.maxAp = getMaxAP(player.age); player.ap = player.maxAp; player.mana = player.maxMana;
-
-  const seatObj = ESTATES.find(e => e.id === player.familySeat);
-  const regen = (seatObj ? seatObj.hpRegen : 5) + (player.trait.id === "miko_healing" ? 25 : 0);
-  player.hp = Math.min(player.maxHp, player.hp + regen);
-
-  player.relations.forEach(npc => {
-    if (!npc.isDead) {
-      npc.age = (npc.age || 20) + 1;
-      if (npc.race === "Человек" && npc.age > 68 && Math.random() < 0.12) {
-        npc.isDead = true; npc.status = "Покойный(ая)";
-        log(`🕯️ ${npc.name} скончался(ась) в возрасте ${npc.age} лет.`);
-      }
-    }
-  });
-
-  generateYearlyGuildQuests();
-
-  if (player.estates.length) {
-    const inc = player.estates.reduce((s, id) => s + (ESTATES.find(e => e.id === id)?.income || 0), 0);
-    player.coins += inc; log(`💰 Доход от имений: +${inc}🪙.`);
-  }
-  if (player.currentJob) {
-    const sal = getJobDataById(player.currentJob)?.ranks[player.jobRankIndex]?.salary || 0;
-    if (sal) { player.coins += sal; log(`💼 Жалование: +${sal}🪙.`); }
-  }
-  if (player.currentUndergroundJob) {
-    const ur = UNDERGROUND_JOBS[player.currentRegionKey]?.ranks[player.undergroundRankIndex];
-    if (ur) {
-      if (Math.random() < ur.risk) {
-        const fine = Math.min(player.coins, ur.salary * 2);
-        player.coins -= fine; player.hp = Math.max(10, player.hp - 25);
-        log(`🚨 <b>ОБЛАВА!</b> Откуп: -${fine}🪙, -25 HP.`); playSound("death");
-      } else { player.coins += ur.salary; log(`🗡️ Доля подполья: +${ur.salary}🪙.`); }
-    }
-  }
-  if (player.castleUpgrades.includes("alchemy_lab")) { player.potionsCount += 2; log(`🧪 Оранжерея сварила +2 зелья.`); }
-
-  if (player.pregnancy) {
-    const isM = Math.random() > 0.5, list = SYLLABLES[isM ? "male" : "female"];
-    const child = {
-      id: "child_" + Date.now(), name: `${list[Math.floor(Math.random() * list.length)]} ${player.surname}`,
-      gender: isM ? "male" : "female", age: 0, birthYear: worldState.currentWorldYear,
-      cp: Math.round(500 * (Math.random() > 0.85 ? 1.35 : 1.1)), role: "Наследник рода",
-      relation: 100, status: "Семья", isFamily: true, isChild: true, isDead: false
-    };
-    player.children.push(child); player.relations.push(child);
-    if (!player.appointedHeirId) player.appointedHeirId = child.id;
-    log(`🎉 Родился ребёнок — <b>${child.name}</b>!`); playSound("win"); player.pregnancy = null;
-  }
-
-  if (worldState.currentWorldYear === CALAMITY_YEAR && !worldState.calamityOccurred) {
-    performStoryActivity("s1_calamity");
-    return;
-  }
-
-  const canon = trySpawnCanonNpc(false);
-  if (canon) log(`⭐ На пути вам повстречался канонический герой: <b>${canon.name}</b>!`);
-
-  if (player.currentPowersSeat && Math.random() < 0.14) {
-    const seat = player.currentPowersSeat, myCp = calcCombatPower(player), chCp = Math.floor(myCp * (0.8 + Math.random() * 0.4));
-    triggerRandomEvent({
-      icon: "⚔️", title: `Вызов Владыке #${seat} Семи Сил!`,
-      desc: `Претендент (БМ ${chCp.toLocaleString()}) требует ваш трон на Монументе!`,
-      choices: [
-        { text: "Защитить титул в бою!", action: (p) => {
-          if (myCp >= chCp) { p.swordGodExp += 40; p.squadFame += 50; return "Вы разгромили претендента и защитили титул (+40 Мечу, +50 Славы)!"; }
-          vacatePowerSeatToWorld(p, "уступил трон в дуэли"); p.currentPowersSeat = null; p.hp = Math.max(15, p.hp - 50);
-          return "Вы проиграли дуэль и потеряли место в Семи Силах (-50 HP)!";
-        }},
-        { text: "Уступить титул без боя", action: (p) => { vacatePowerSeatToWorld(p, "добровольно сложил полномочия"); p.currentPowersSeat = null; return "Вы уступили ранг претенденту."; } }
-      ]
-    });
-    return;
-  }
-
-  if (player.age > player.maxAge - 15 && player.trait.id !== "god_mode") {
-    const decay = Math.floor(Math.random() * 10) + 5;
-    player.hp -= decay; log(`Старость даёт о себе знать (-${decay} HP).`);
-  }
-  if (player.hp <= 0 || player.age >= player.maxAge) {
-    handleDeath(player.hp <= 0 ? "Смерть от ран и истощения сил" : "Мирная кончина от старости");
-    return;
-  }
-
-  // Сны Хитогами чаще приходят на его ветке или при нейтралитете
-  const evPool = RANDOM_EVENTS.filter(e => {
-    if (player.age < e.minAge) return false;
-    if (e.id === "hitogami_dream_tempt" && player.dynastyFaction === "orsted") return false;
-    const ch = (e.id === "hitogami_dream_tempt" && player.dynastyFaction === "hitogami") ? 0.35 : e.chance;
-    return Math.random() < ch;
-  });
-  if (evPool.length && Math.random() < 0.55) {
-    triggerRandomEvent(evPool[Math.floor(Math.random() * evPool.length)]);
-    return;
-  }
-
-  log(player.age <= 3 ? "Безмятежное детство в кругу семьи (+10 HP)." : "Год прошёл в трудах и тренировках.");
-  if (player.age <= 3) player.hp = Math.min(player.maxHp, player.hp + 10);
-  playSound("year");
-  updateUI();
-}
-
-function triggerRandomEvent(ev) {
-  setText("event-icon", ev.icon || "⚡");
-  setText("event-title", ev.title);
-  setText("event-desc", ev.desc);
-  const cBox = $("event-choices"); if (!cBox) return;
-  cBox.innerHTML = "";
-  ev.choices.forEach(ch => {
-    const btn = document.createElement("button");
-    btn.className = "event-choice-btn"; btn.innerText = ch.text;
-    btn.onclick = () => {
-      const out = ch.action(player);
-      if ($("event-modal")) $("event-modal").style.display = "none";
-      log(`<b>[Выбор]</b> ${out}`); playSound("click");
-      showActionModal("Итог", out, ev.icon || "⚡");
-      updateUI();
-      if (player.hp <= 0) handleDeath("Пал жертвой роковых событий года");
-    };
-    cBox.appendChild(btn);
-  });
-  if ($("event-modal")) $("event-modal").style.display = "flex";
-}
-
-// =========================================================================
-// СМЕРТЬ, НАСЛЕДОВАНИЕ (ТИТУЛ + РЕЛИКВИЯ + СЕМЬЯ), ПЕРЕРОЖДЕНИЕ И СБРОС
-// =========================================================================
-function handleDeath(reason) {
-  playSound("death");
-  worldState.dynastyHistory.push({
-    gen: player.generation, name: player.name, gender: player.gender, race: player.race,
-    peakCp: calcCombatPower(player), maxAge: player.age, deathReason: reason, powersSeat: player.currentPowersSeat
-  });
-
-  setText("death-reason", `${reason} в возрасте ${player.age} лет.`);
-  if ($("death-summary")) $("death-summary").innerHTML = `
-    <div>🎖️ <b>${player.name}</b> (${player.race}) • Прожито: <b>${player.age} л.</b></div>
-    <div>⚡ Пиковая БМ: <b>${calcCombatPower(player).toLocaleString()}</b> • Золото: <b>${player.coins.toLocaleString()}🪙</b></div>
-    ${player.currentPowersSeat ? `<div style="color:var(--gold);">🏆 Титул #${player.currentPowersSeat} Семи Сил (наследуется преемником!)</div>` : ""}`;
-
-  const hList = $("heirs-list"), hBlock = $("heir-selection-block");
-  const children = player.children.filter(c => !c.isDead);
-  if (hList && hBlock) {
-    if (children.length) {
-      hBlock.style.display = "block";
-      hList.innerHTML = children.map(c => {
-        const age = Math.max(1, worldState.currentWorldYear - (c.birthYear || worldState.currentWorldYear - 20));
-        const app = player.appointedHeirId === c.id;
-        return `<div class="shop-item"><div><b>${c.name}</b> ${app ? '<span class="badge-legendary">Завещание 👑</span>' : ""}
-          <div style="font-size:11px; color:var(--muted);">${c.gender === "male" ? "Сын" : "Дочь"} • ${age} л.</div></div>
-          <button style="background:#10b981;" onclick="continueAsHeir('${c.id}', ${age})">Играть 👑</button></div>`;
-      }).join("");
-    } else {
-      hBlock.style.display = "none";
-      if (player.currentPowersSeat) vacatePowerSeatToWorld(player, "умер без наследников");
-    }
-  }
-  saveGame();
-  if ($("death-overlay")) $("death-overlay").style.display = "flex";
-}
-
-function continueAsHeir(childId, realAge) {
-  const prev = player;
-  const child = prev.children.find(c => c.id === childId); if (!child) return;
-  dynastyGeneration++;
-
-  const isApp = prev.appointedHeirId === childId;
-  const inheritedCoins = isApp ? prev.coins : Math.floor(prev.coins * 0.7);
-  const raceObj = Object.values(RACES).find(r => r.name === prev.race) || RACES.human;
-  const hasYard = prev.castleUpgrades.includes("training_yard"), hasSharia = prev.estates.includes("sharia_castle"), hasPalace = prev.estates.includes("asura_palace");
-
-  const originMock = {
-    name: `Династия ${prev.surname}`,
-    manaBonus: Math.floor(prev.maxMana * 0.2) + (hasSharia ? 15 : 0),
-    swordGod: Math.floor(prev.swordGodExp * 0.25) + (hasYard ? 25 : 0) + (hasPalace ? 30 : 0),
-    waterGod: hasPalace ? 30 : 0, northGod: hasPalace ? 30 : 0,
-    coins: inheritedCoins, int: 12,
-    log: `Вы продолжили род ${prev.surname}. ${isApp ? "Получено 100% казны!" : "Получено 70% казны."}`
-  };
-
-  // Реальные семейные связи (покойный предок + супруг + братья/сёстры)
-  const familyRels = [{ id: "prev_parent", name: prev.name, gender: prev.gender, age: prev.age, role: "Предок-правитель", cp: calcCombatPower(prev), relation: 100, status: "Покойный(ая)", isFamily: true, isDead: true }];
-  if (prev.spouse && !prev.spouse.isDead) familyRels.push({ ...prev.spouse, role: "Родитель", status: "Семья", isFamily: true });
-  prev.children.filter(c => c.id !== childId && !c.isDead).forEach(sib => {
-    familyRels.push({ ...sib, age: Math.max(1, worldState.currentWorldYear - (sib.birthYear || worldState.currentWorldYear - 15)), role: sib.gender === "male" ? "Брат" : "Сестра", isChild: false });
-  });
-
-  if ($("death-overlay")) $("death-overlay").style.display = "none";
-  initCharacter(child.name.split(" ")[0], prev.surname, child.gender, raceObj, prev.currentRegionKey, originMock, prev.trait, prev.familyStatus, realAge, familyRels);
-
-  // Наследуемые поля, включая титул Семи Сил и Фамильную Реликвию!
-  player.estates = [...prev.estates];
-  player.familySeat = prev.familySeat;
-  player.castleUpgrades = [...prev.castleUpgrades];
-  player.nobilityTitle = prev.nobilityTitle;
-  player.asuraFaction = prev.asuraFaction;
-  player.languages = [...prev.languages];
-  player.dynastyFaction = prev.dynastyFaction;
-  player.factionProgress = prev.factionProgress;
-  player.hitogamiTrust = prev.hitogamiTrust;
-  player.tabletsDeciphered = [...prev.tabletsDeciphered];
-  player.perugiusTrials = [...prev.perugiusTrials];
-  player.greyratAllies = [...prev.greyratAllies];
-  player.discoveredSevenPowers = [...prev.discoveredSevenPowers];
-
-  if (prev.currentPowersSeat) {
-    player.currentPowersSeat = prev.currentPowersSeat;
-    const pow = worldState.sevenPowers.find(p => p.rank === prev.currentPowersSeat);
-    if (pow) { pow.name = player.name; pow.holderType = "player"; pow.cp = calcCombatPower(player); }
-    log(`🏆 По праву крови вы унаследовали титул <b>#${player.currentPowersSeat} Семи Великих Сил</b>!`);
-  }
-
-  if (prev.heirloomSlot && prev.equipment[prev.heirloomSlot]) {
-    const relic = { ...prev.equipment[prev.heirloomSlot] };
-    player.equipment[prev.heirloomSlot] = relic;
-    if (relic.hp) { player.maxHp += relic.hp; player.hp += relic.hp; }
-    log(`✨ Вы унаследовали Фамильную Реликвию: <b>${relic.name}</b>!`);
-  }
-
-  updateUI();
-}
-
-function reincarnateNewSoul() {
-  if (player?.currentPowersSeat) vacatePowerSeatToWorld(player, "переродился в новой душе");
-  const karma = addReincarnationKarma();
-  if ($("death-overlay")) $("death-overlay").style.display = "none";
-  dynastyGeneration = 1; player = null;
-  saveGame();
-  showActionModal("Колесо Сансары", `Время мира продолжается (сейчас <b>${worldState.currentWorldYear} г. К.Д.</b>)! Накоплена Карма ур. ${karma}.`, "🔄");
-  showCreation();
-}
-
-function askNewSoul() {
-  askConfirm("Новая душа (время идёт дальше)", `Текущий герой оставит мир в <b>${worldState.currentWorldYear} г. К.Д.</b>, а вы воплотитесь новым персонажем с +1 Кармой. Продолжить?`, reincarnateNewSoul);
-}
-
-function askFullWorldReset() {
-  askConfirm("Сброс мира к 407 году", "Вы начнёте самую первую жизнь заново в <b>407 г. К.Д.</b>! Все 7 Великих Сил вернутся на свои места, история мира очистится. Продолжить?", fullWorldReset);
-}
-
-function fullWorldReset() {
-  worldState = { currentWorldYear: START_YEAR, calamityOccurred: false, sevenPowers: cloneDefaultPowers(), chronicles: [], dynastyHistory: [] };
-  dynastyGeneration = 1; player = null;
-  try { localStorage.removeItem("bit_tensei_save"); } catch {}
-  if ($("death-overlay")) $("death-overlay").style.display = "none";
-  showActionModal("Чистый лист", "Мир возвращён к 407 г. К.Д. Все Семь Великих Сил вновь на своих тронах!", "🌅");
-  showCreation();
-}
-
-// =========================================================================
-// СОХРАНЕНИЯ (LOCALSTORAGE + TELEGRAM CLOUD + ЭКСПОРТ/ИМПОРТ КОДОМ)
-// =========================================================================
-function generateYearlyGuildQuests() {
-  const pIdx = ADVENTURER_RANKS.indexOf(player.guildRank);
-  const pool = ALL_GUILD_QUESTS.filter(q => ADVENTURER_RANKS.indexOf(q.rank) <= pIdx + 1);
-  player.guildQuestsThisYear = [...pool].sort(() => 0.5 - Math.random()).slice(0, 5);
-}
-
-function buildSavePayload() {
-  return JSON.stringify({ player, dynastyGeneration, worldState, logsHtml: $("logs")?.innerHTML || "" });
-}
-
-function saveGame() {
-  try {
-    const json = buildSavePayload();
-    localStorage.setItem("bit_tensei_save", json);
-    if (tg?.CloudStorage && json.length < 4000) tg.CloudStorage.setItem("bit_tensei_save", json);
-  } catch (e) {}
-}
-
-function applyLoadedData(data) {
-  if (!data?.worldState) return false;
-  worldState = data.worldState;
-  dynastyGeneration = data.dynastyGeneration || 1;
-  player = data.player || null;
-  if ($("logs") && data.logsHtml) $("logs").innerHTML = data.logsHtml;
-  if (player) {
-    if ($("creation-overlay")) $("creation-overlay").style.display = "none";
-    renderUI();
-    return true;
-  }
-  return false;
-}
-
-function loadGame() {
-  try {
-    const raw = localStorage.getItem("bit_tensei_save");
-    if (!raw) return false;
-    return applyLoadedData(JSON.parse(raw));
-  } catch { return false; }
-}
-
-function openSaveModal() {
-  try {
-    const b64 = btoa(unescape(encodeURIComponent(buildSavePayload())));
-    if ($("save-export-text")) $("save-export-text").value = b64;
-  } catch {}
-  if ($("save-modal")) $("save-modal").style.display = "flex";
-}
-function closeSaveModal() { if ($("save-modal")) $("save-modal").style.display = "none"; }
-
-function copySaveCode() {
-  const txt = $("save-export-text")?.value;
-  if (!txt) return;
-  navigator.clipboard?.writeText(txt).then(() => showActionModal("Скопировано", "Код сохранения скопирован в буфер!", "📋"));
-}
-
-function importSaveCode() {
-  try {
-    const code = $("save-import-text")?.value.trim();
-    if (!code) return;
-    const json = decodeURIComponent(escape(atob(code)));
-    if (applyLoadedData(JSON.parse(json))) {
-      saveGame(); closeSaveModal();
-      showActionModal("Загружено!", "Прогресс мира успешно восстановлен!", "💾");
-    }
-  } catch { showActionModal("Ошибка", "Неверный код сохранения!", "❌"); }
-}
-
-if (!loadGame()) showCreation();
+const SYLLABLES = {
+  male: ["Вал", "Сед", "Лео", "Клод", "Жан", "Огюст", "Филипп", "Рей", "Люк", "Марк", "Ден", "Эд", "Рудеус", "Пол", "Клифф", "Арси", "Клайв", "Заноба"],
+  female: ["Аме", "Селе", "Хиль", "Эле", "Клэр", "Роза", "Диа", "Лиза", "София", "Жанна", "Али", "Сильфи", "Эрис", "Рокси", "Зенит", "Норн", "Айша"],
+  suffix: ["рик", "берт", "ион", "ард", "ель", "ис", "дар", "монт", "валь", "ус", "етта", "ин"],
+  surnames: ["Грейрат", "де Роа", "де Арс", "Блэквуд", "Фрост", "Клемент", "Дорудиа", "Мигурдия", "Спардия", "Шевалье"]
+};
